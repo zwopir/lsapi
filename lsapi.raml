@@ -1,0 +1,67 @@
+#%RAML 0.8
+---
+title: Livestatus API
+baseUri: http://localhost:5000/{version}/
+version: v1
+
+/hosts:
+    get:
+        queryParameters:
+            filter: JSON
+                required: false
+
+/host/{hostname}:
+    get:
+    post:
+        queryParameters:
+            downtime:
+                downtimeJson: JSON
+                required: true
+
+/services:
+    get:
+        queryParameters:
+            filter: JSON
+                required: false
+    post:
+        queryParameter:
+            filter: JSON
+                required: true
+            downtime: JSON
+                required: true
+
+    /{hostname}:
+        get:
+        post:
+            queryParameters:
+                downtime: JSON
+                    required: true
+        /{servicename}:
+            get:
+            post:
+                queryParameters:
+                    downtime: JSON
+                        required: true
+
+/downtimes:
+    get:
+        queryParameters:
+            filter: JSON
+                required: false
+    delete:
+        queryParameters:
+            filter: JSON
+                required: true
+
+/downtime/{id}:
+    get:
+    delete:
+
+/columns:
+    get:
+
+/stats/{table}/{operator}/{column}/{value}:
+    get:
+        queryParameters:
+            filter: JSON
+                required: false
