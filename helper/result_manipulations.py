@@ -1,5 +1,7 @@
 from flask import url_for
-from data.defaults import INTEGER_COLUMNS
+
+from model.defaults import INTEGER_COLUMNS
+
 
 def downtimes2array(ent):
     new_ent = ent

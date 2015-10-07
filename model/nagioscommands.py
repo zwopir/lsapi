@@ -1,28 +1,44 @@
-from __future__ import print_function
-import json
 import datetime
 
 from api_exceptions import \
-    InternalProcessingException, \
     LivestatusSocketException, \
     InternalProcessingException
 
 
-MANDATORY_HOST_SCHEDULE_PARAMETER = ['host_name', 'start_time', 'end_time', 'author', 'comment']
-MANDATORY_SVC_SCHEDULE_PARAMETER = ['host_name', 'service_description', 'start_time', 'end_time', 'author', 'comment']
-HOST_SCHEDULE_PARAMETER = ['host_name', 'start_time', 'end_time', 'fixed', 'trigger_id', 'duration', 'author', 'comment']
+MANDATORY_HOST_SCHEDULE_PARAMETER = [
+    'host_name',
+    'start_time',
+    'end_time',
+    'author',
+    'comment'
+]
+MANDATORY_SVC_SCHEDULE_PARAMETER = [
+    'host_name',
+    'service_description',
+    'start_time',
+    'end_time',
+    'author',
+    'comment'
+]
+HOST_SCHEDULE_PARAMETER = [
+    'host_name',
+    'start_time',
+    'end_time',
+    'fixed',
+    'trigger_id',
+    'duration',
+    'author',
+    'comment'
+]
 
 
-class NagiosDowntime:
+class NagiosCommand:
 
-    def __init__(self):
+    def __init__(self, ls_accessor):
         self.nagios_command = None
+        self.ls_accessor = ls_accessor
 
-    def create_downtime(self, downtime_type, downtime_data):
-        """
-        :param downtime_data: json string with parameters from nagios documentation as keys
-        :return: downtime command string
-        """
+    def create_downtime(self, downtime_type, downtime_dict):
         if downtime_type == 'HOST':
             cmd = 'SCHEDULE_HOST_DOWNTIME'
             MANDATOR_PARAMETERS = MANDATORY_HOST_SCHEDULE_PARAMETER
@@ -32,58 +48,70 @@ class NagiosDowntime:
         else:
             raise InternalProcessingException("no such downtime type. Must be 'SVC' or 'HOST'", status_code=500)
 
-        # create dict from json
-        d = json.loads(downtime_data)
-
         # check if all mandatory parameters are given
         mandatory_parameters_given = True
         for k in MANDATOR_PARAMETERS:
-            if k not in d.keys():
+            if k not in downtime_dict.keys():
                 mandatory_parameters_given &= False
         if not mandatory_parameters_given:
-            raise InternalProcessingException("not all mandatory parameters are given", status_code=500)
+            raise InternalProcessingException("not all mandatory downtime parameters are given", status_code=500)
 
         # handle optional parameters
-        if 'fixed' not in d:
+        if 'fixed' not in downtime_dict:
             # not a fixed downtime
-            d['fixed'] = 0
+            downtime_dict['fixed'] = 0
 
-        if 'trigger_id' not in d:
-            d['trigger_id'] = 0
+        if 'trigger_id' not in downtime_dict:
+            downtime_dict['trigger_id'] = 0
 
         # type casting
         for k in ["start_time", "end_time"]:
             try:
-                d[k] = int(d[k])
+                downtime_dict[k] = int(downtime_dict[k])
             except TypeError:
                 raise InternalProcessingException("time must be specified in unix timestamp format", status_code=500)
 
-        if 'duration' not in d:
-            d['duration'] = d['end_time'] - d['start_time']
+        if 'duration' not in downtime_dict:
+            downtime_dict['duration'] = downtime_dict['end_time'] - downtime_dict['start_time']
         else:
             try:
-                d['duration'] = int(d['duration'])
+                downtime_dict['duration'] = int(downtime_dict['duration'])
             except TypeError:
                 raise InternalProcessingException("time must be specified in unix timestamp format", status_code=500)
 
         # assemble command
-        # now = (datetime.datetime.now() - datetime.datetime(1970, 1, 1)).total_seconds()
         now = timedelta_to_seconds(datetime.datetime.now() - datetime.datetime(1970, 1, 1))
         if downtime_type == 'HOST':
-            nagios_command = "COMMAND [%d] %s;%s;%d;%d;%d;%d;%d;%s;%s\n" \
-                         % (int(now), cmd, d['host_name'], d['start_time'], d['end_time'], d['fixed'], d['trigger_id'], d['duration'], d['author'], d['comment'])
-        elif downtime_type == 'SVC':
-            nagios_command = "COMMAND [%d] %s;%s;%s;%d;%d;%d;%d;%d;%s;%s\n" \
-                         % (int(now), cmd, d['host_name'], d['service_description'], d['start_time'], d['end_time'], d['fixed'], d['trigger_id'], d['duration'], d['author'], d['comment'])
+            nagios_command = "COMMAND [%d] %s;%s;%d;%d;%d;%d;%d;%s;%s\n" % (
+                int(now), 
+                cmd, 
+                downtime_dict['host_name'], 
+                downtime_dict['start_time'], 
+                downtime_dict['end_time'], 
+                downtime_dict['fixed'], 
+                downtime_dict['trigger_id'], 
+                downtime_dict['duration'], 
+                downtime_dict['author'], 
+                downtime_dict['comment'])
         else:
-            # already catched
-            pass
+            # downtime_type == 'SVC':
+            nagios_command = "COMMAND [%d] %s;%s;%s;%d;%d;%d;%d;%d;%s;%s\n" % (
+                int(now), 
+                cmd, 
+                downtime_dict['host_name'], 
+                downtime_dict['service_description'], 
+                downtime_dict['start_time'], 
+                downtime_dict['end_time'], 
+                downtime_dict['fixed'], 
+                downtime_dict['trigger_id'], 
+                downtime_dict['duration'], 
+                downtime_dict['author'], 
+                downtime_dict['comment'])
 
-        self.nagios_command = nagios_command
+        # self.nagios_command = nagios_command
+        self.ls_accessor.connect()
+        self.ls_accessor.send(nagios_command)
         return nagios_command
-
-    def issue_downtime_command(self):
-        pass
 
     def delete_downtime(self, downtime_type, downtime_id):
         """
@@ -100,6 +128,8 @@ class NagiosDowntime:
             nagios_command = "COMMAND [%d] DEL_%s_DOWNTIME;%d\n" % (now, downtime_type, int(downtime_id))
         except TypeError:
             InternalProcessingException("downtime id must be an integer", status_code=500)
+        self.ls_accessor.connect()
+        self.ls_accessor.send(nagios_command)
         return nagios_command
 
 

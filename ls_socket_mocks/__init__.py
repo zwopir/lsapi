@@ -13,7 +13,7 @@ class LsSocketMocks:
     def connect(self):
         self.ls_reader_object = None
 
-    def send_query(self, query_object):
+    def send(self, query_object):
         pass
 
     def send_command(self, command):

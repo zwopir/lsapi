@@ -1,284 +1,255 @@
 #!/usr/bin/env python
 from __future__ import print_function
-import ConfigParser
-import os
-import sys
 import urllib
-import random
-import time
 from flask import Flask, request, jsonify
-from lssocket.socket_communication import LsSocket
-from lsquery import LsQuery
-from downtimes import NagiosDowntime
+from model.lsquery import LsQuery, LsQueryCtx
+from model.nagioscommands import NagiosCommand
 from api_exceptions import \
     FilterParsingException, \
     NoDataException, \
     NoTableException, \
     BadFilterException, \
     BadRequestException, \
-    LivestatusSocketException
-from helper.result_manipulations import \
-    make_public_service, \
-    make_public_downtime, \
-    make_public_host, \
-    make_public_comment
-from helper.filter_handling import get_filter_from_get_parameter
-from lscalls.tables import get_table_entries
-import json
+    LivestatusSocketException, \
+    InternalProcessingException
+from helper.filter_handling import \
+    get_filter_from_get_parameter, \
+    get_columns_from_get_parameter_or_use_defaults, \
+    filter_to_dict
+from controller.actions import LivestatusActionCtx
+from configuration.socket_config import SocketConfiguration
 
 
-# TODO: empty __init__.py files
 # TODO: class and def documentations
 # TODO: multi-downtimes
-# TODO: write tests
-# TODO: root resource
-
+#  TODO: write tests
 
 app = Flask(__name__)
-
-# read and parse configuration file
-config = ConfigParser.ConfigParser()
-this_path = os.path.dirname(__file__) + '/'
-this_path_conf = os.path.dirname(__file__) + '/conf/'
-for path in ['/etc/', this_path, this_path_conf]:
-    if os.path.exists(path + 'lsapi.cfg'):
-        config.read(path + 'lsapi.cfg')
-        app.logger.info("reading configuration file from %s" % path)
-        break
-
-c = {
-    'connection_type': config.get('connection', 'type', 'AF_INET'),
-    'connection_host': config.get('connection', 'host', 'localhost'),
-    'connection_port': int(config.get('connection', 'port', 6557)),
-    'connection_file': config.get('connection', 'socketfile', '/omd/sites/monitoring/tmp/run/live')
-}
 
 # version
 version = 'v1'
 
-# init LS accessor class
-if c['connection_type'] == 'AF_INET':
-    ls_socket_reader = LsSocket((c['connection_host'], c['connection_port']), c['connection_type'])
-elif c['connection_type'] == 'AF_UNIX':
-    ls_socket_reader = LsSocket(c['connection_file'], c['connection_type'])
-else:
-    raise ValueError("connection type must be either AF_INET or AF_UNIX")
-    sys.exit(1)
+
+config = SocketConfiguration(__file__)
+ls_socket_reader = config.get_socket_reader_instance()
 
 # init LS query class
+ls_query = LsQuery(ls_socket_reader)
 
 # init LS downtime class
+nagios_command = NagiosCommand(ls_socket_reader)
+
+
+@app.route('/%s/columns' % version, methods=['GET'])
+def get_columns():
+    entity = 'columns'
+    query_filter = get_filter_from_get_parameter(request.args)
+    columns = get_columns_from_get_parameter_or_use_defaults(request.args, entity)
+    with LsQueryCtx(ls_query, entity, query_filter, columns) as ls_ctx:
+        data, ls_return_code = ls_ctx.query()
+        with LivestatusActionCtx(data, ls_return_code) as task_ctx:
+            return task_ctx.return_table()
 
 
 # COMMENTS
 # all comments
 @app.route('/%s/comments' % version, methods=['GET'])
 def g_comments():
-    comment_filter = get_filter_from_get_parameter(request.args)
-    return get_table_entries(ls_socket_reader, 'comments', comment_filter, False, make_public_comment)
+    entity = 'comments'
+    query_filter = get_filter_from_get_parameter(request.args)
+    columns = get_columns_from_get_parameter_or_use_defaults(request.args, entity)
+    with LsQueryCtx(ls_query, entity, query_filter, columns) as ls_ctx:
+        data, ls_return_code = ls_ctx.query()
+        with LivestatusActionCtx(data, ls_return_code) as task_ctx:
+            return task_ctx.return_table()
 
 
 # by id
-@app.route('/%s/comment/<int:comment_id>' % version, methods=['GET'])
+@app.route('/%s/comments/<int:comment_id>' % version, methods=['GET'])
 def get_comment(comment_id):
-    filter_string = '{"eq":["id","%d"]}' % comment_id
-    return get_table_entries(ls_socket_reader, 'comments', filter_string, True, make_public_comment)
+    entity = 'comments'
+    query_filter = filter_to_dict('{"eq":["id","%d"]}' % comment_id)
+    columns = get_columns_from_get_parameter_or_use_defaults(request.args, entity)
+    with LsQueryCtx(ls_query, entity, query_filter, columns) as ls_ctx:
+        data, ls_return_code = ls_ctx.query()
+        with LivestatusActionCtx(data, ls_return_code) as task_ctx:
+            return task_ctx.return_table()
 
 
 # DOWNTIMES
-# all downtimes (GET) and filtered (POST)
+# get all downtimes (GET)
+# delete downtimes specified by filter (DELETE)
 @app.route('/%s/downtimes' % version, methods=['GET', 'DELETE'])
 def g_downtime():
-    downtime_filter = get_filter_from_get_parameter(request.args)
-    downtime_json, http_returncode = get_table_entries(ls_socket_reader, 'downtimes', downtime_filter, False, make_public_downtime, False)
-    if request.method == 'GET':
-        return jsonify(downtime_json), http_returncode
-    elif request.method == 'DELETE':
-        if downtime_filter:
-            return jsonify({"message": "got a filter"})
-        else:
-            raise BadRequestException("no filter given, not deleting all downtimes", status_code=400)
-    else:
-        return jsonify({'message': 'method not allowed'}), 405
+    entity = 'downtimes'
+    columns = get_columns_from_get_parameter_or_use_defaults(request.args, entity)
+    query_filter = get_filter_from_get_parameter(request.args)
+    with LsQueryCtx(ls_query, entity, query_filter, columns) as ls_ctx:
+        data, ls_return_code = ls_ctx.query()
+        if request.method == 'GET':
+            with LivestatusActionCtx(data, ls_return_code) as task_ctx:
+                return task_ctx.return_table()
+        elif request.method == 'DELETE':
+            if query_filter:
+                with LivestatusActionCtx(data, ls_return_code) as task_ctx:
+                    return task_ctx.delete_downtime(nagios_command)
+            else:
+                raise BadRequestException("no filter given, not deleting all downtimes", status_code=400)
+
 
 # by id. View (GET) and Delete (DELETE)
-@app.route('/%s/downtime/<int:downtime_id>' % version, methods=['GET', 'DELETE'])
+@app.route('/%s/downtimes/<int:downtime_id>' % version, methods=['GET', 'DELETE'])
 def get_downtime(downtime_id):
-    filter_string = '{"eq":["id",%d]}' % downtime_id
-    downtime_json, http_returncode = get_table_entries(ls_socket_reader, 'downtimes', filter_string, True, make_public_downtime, False)
-    if request.method == 'GET':
-        return jsonify(downtime_json), http_returncode
-    elif request.method == 'DELETE':
-        if http_returncode == 200:
-            if downtime_json['downtimes']['service_display_name'] == '':
-                downtime_type = 'HOST'
-            else:
-                downtime_type = 'SVC'
-            nd = NagiosDowntime()
-            delete_cmd = nd.delete_downtime(downtime_type, downtime_id)
-            ls_socket_reader.connect()
-            ls_socket_reader.send_command(delete_cmd)
-            return jsonify({'result': 'ok'}), 200
-        elif http_returncode == 404:
-            return jsonify({'message': 'downtime not found'}), 404
-        else:
-            return jsonify({"message": "downtime lookup did not succeed"}), http_returncode
-    else:
-        return jsonify({'message': 'method not allowed'}), 405
+    entity = 'downtimes'
+    query_filter = filter_to_dict('{"eq":["id",%d]}' % downtime_id)
+    columns = get_columns_from_get_parameter_or_use_defaults(request.args, entity)
+    with LsQueryCtx(ls_query, entity, query_filter, columns) as ls_ctx:
+        data, ls_return_code = ls_ctx.query()
+        with LivestatusActionCtx(data, ls_return_code) as task_ctx:
+            if request.method == 'GET':
+                return task_ctx.return_table()
+            elif request.method == 'DELETE':
+                return task_ctx.delete_downtime(nagios_command)
 
 
 # SERVICES
 # get all services
-@app.route('/%s/services' % version, methods=['GET'])
+@app.route('/%s/services' % version, methods=['GET', 'POST'])
 def get_services():
-    services_filter = get_filter_from_get_parameter(request.args)
-    return get_table_entries(ls_socket_reader, 'services', services_filter, False, make_public_service)
+    entity = 'services'
+    query_filter = get_filter_from_get_parameter(request.args)
+    columns = get_columns_from_get_parameter_or_use_defaults(request.args, entity)
+    with LsQueryCtx(ls_query, entity, query_filter, columns) as ls_ctx:
+        data, ls_return_code = ls_ctx.query()
+    if request.method == 'POST':
+        if not query_filter:
+            raise BadRequestException("no filter given, not setting downtime on all services", status_code=400)
+        downtime_data = request.get_json(force=True, silent=False, cache=False)
+        with LivestatusActionCtx(data, ls_return_code) as task_ctx:
+            count, downtime_identifier = task_ctx.set_downtime(nagios_command, downtime_data)
+        # verify new downtimes
+        downtime_filter = filter_to_dict('{"rei": ["comment", "%s"]}' % downtime_identifier)
+        downtime_columns = get_columns_from_get_parameter_or_use_defaults({}, 'downtimes')
+        with LsQueryCtx(ls_query, 'downtimes', downtime_filter, downtime_columns) as downtime_ls_ctx:
+            downtime_return_code, message = downtime_ls_ctx.verify_downtimes(count)
+            return jsonify({"message": message}), downtime_return_code
+    else:
+        # GET request
+        with LivestatusActionCtx(data, ls_return_code) as task_ctx:
+            return task_ctx.return_table()
+
 
 # get services by host
-@app.route('/%s/services/<host>' % version, methods=['GET'])
+@app.route('/%s/services/<host>' % version, methods=['GET', 'POST'])
 def get_services_filtered_by_host(host):
-    host_filter = '{"eq":["host_display_name", "%s"]}' % host
-    return get_table_entries(ls_socket_reader, 'services', host_filter, False, make_public_service)
+    entity = 'services'
+    query_filter = filter_to_dict('{"eq":["host_display_name", "%s"]}' % host)
+    columns = get_columns_from_get_parameter_or_use_defaults(request.args, entity)
+    with LsQueryCtx(ls_query, entity, query_filter, columns) as ls_ctx:
+        data, ls_return_code = ls_ctx.query()
+    if request.method == 'POST':
+        downtime_data = request.get_json(force=True, silent=False, cache=False)
+        with LivestatusActionCtx(data, ls_return_code) as task_ctx:
+            count, downtime_identifier = task_ctx.set_downtime(nagios_command, downtime_data)
+        # verify new downtimes
+        downtime_filter = filter_to_dict('{"rei": ["comment", "%s"]}' % downtime_identifier)
+        downtime_columns = get_columns_from_get_parameter_or_use_defaults({}, 'downtimes')
+        with LsQueryCtx(ls_query, 'downtimes', downtime_filter, downtime_columns) as downtime_ls_ctx:
+            downtime_return_code, message = downtime_ls_ctx.verify_downtimes(count)
+            return jsonify({"message": message}), downtime_return_code
+    else:
+        # GET request
+        with LivestatusActionCtx(data, ls_return_code) as task_ctx:
+            return task_ctx.return_table()
+
 
 # get service by host and service
-@app.route('/%s/service/<host>/<path:service>' % version, methods=['GET', 'POST'])
+@app.route('/%s/services/<host>/<path:service>' % version, methods=['GET', 'POST'])
 def get_service_filtered_by_host_and_service(host, service):
+    entity = 'services'
     unencoded_service = urllib.unquote_plus(service)
-    service_filter = '{"and":[{"eq":["host_display_name","%s"]},{"eq":["service_description","%s"]}]}' \
-                     % (host, unencoded_service)
-    service_json = get_table_entries(ls_socket_reader, 'services', service_filter, True, make_public_service)
+    query_filter = filter_to_dict('{"and":[{"eq":["host_display_name","%s"]},{"eq":["service_description","%s"]}]}'
+                                  % (host, unencoded_service))
+    columns = get_columns_from_get_parameter_or_use_defaults(request.args, entity)
+    with LsQueryCtx(ls_query, entity, query_filter, columns) as ls_ctx:
+        data, ls_return_code = ls_ctx.query()
     if request.method == 'POST':
-        downtime_datajson = request.get_json(force=True, silent=False, cache=False)
-        try:
-            # check if POST json contains a key 'downtime'
-            downtime_data = downtime_datajson['downtime']
-            downtime_identifier = 'API%06x' % random.randrange(16**6)
-            if 'comment' in downtime_data.keys():
-                downtime_data['comment'] = "%s: %s" % (downtime_identifier, downtime_data['comment'])
-            else:
-                downtime_data['comment'] = "%s: no comment provided" % downtime_identifier
-        except KeyError:
-            raise BadRequestException('Bad request: POST json data doesnt include a downtime key', status_code=400)
-        # check if service is found in Livestatus
-        j, http_returncode = service_json
-        if http_returncode == 200:
-            # overwrite or create service_description key in downtime_data structure
-            downtime_data['service_description'] = service
-            downtime_data['host_name'] = host
-            # create NagiosDowntime instance
-            nd = NagiosDowntime()
-            # create downtime command
-            downtime_cmd = nd.create_downtime('SVC', json.dumps(downtime_data))
-            # send downtime command
-            ls_socket_reader.connect()
-            ls_socket_reader.send_command(downtime_cmd)
-            # get the new created downtime via livestatus downtime table and filter 'downtime_identifier'
-            downtime_filter = '{"filter":{"rei":["comment","%s"]}}' % downtime_identifier
-            # allow livestatus some time to set the downtime
-            for i in range(1, 5):
-                time.sleep(1)
-                downtime_json, http_returncode = get_table_entries(ls_socket_reader, 'downtimes', downtime_filter, True,
-                                                                   make_public_downtime)
-                if http_returncode == 404:
-                    pass
-                elif http_returncode == 200 or http_returncode == 500:
-                    return downtime_json, http_returncode
-                else:
-                    return jsonify({"message": "unknown result from querying the new downtime"}), 500
-            # result query timed out
-            return jsonify({"message": "setting downtime did not succeed within 5 seconds "}), 500
-        else:
-            raise NoDataException("no service %s found in monitoring" % service, status_code=404)
+        downtime_data = request.get_json(force=True, silent=False, cache=False)
+        with LivestatusActionCtx(data, ls_return_code) as task_ctx:
+            count, downtime_identifier = task_ctx.set_downtime(nagios_command, downtime_data)
+        # verify new downtimes
+        downtime_filter = filter_to_dict('{"rei": ["comment", "%s"]}' % downtime_identifier)
+        downtime_columns = get_columns_from_get_parameter_or_use_defaults({}, 'downtimes')
+        with LsQueryCtx(ls_query, 'downtimes', downtime_filter, downtime_columns) as downtime_ls_ctx:
+            downtime_return_code, message = downtime_ls_ctx.verify_downtimes(count)
+            return jsonify({"message": message}), downtime_return_code
     else:
-        return service_json
+        # GET request
+        with LivestatusActionCtx(data, ls_return_code) as task_ctx:
+            return task_ctx.return_table()
 
 
 # HOSTS
 # get all hosts
-@app.route('/%s/hosts' % version, methods=['GET'])
+@app.route('/%s/hosts' % version, methods=['GET', 'POST'])
 def get_hosts():
-    hosts_filter = get_filter_from_get_parameter(request.args)
-    return get_table_entries(ls_socket_reader, 'hosts', hosts_filter, False, make_public_host)
+    entity = 'hosts'
+    query_filter = get_filter_from_get_parameter(request.args)
+    columns = get_columns_from_get_parameter_or_use_defaults(request.args, entity)
+    with LsQueryCtx(ls_query, entity, query_filter, columns) as ls_ctx:
+        data, ls_return_code = ls_ctx.query()
+    if request.method == 'POST':
+        if not query_filter:
+            raise BadRequestException("no filter given, not setting downtime on all hosts", status_code=400)
+        downtime_data = request.get_json(force=True, silent=False, cache=False)
+        with LivestatusActionCtx(data, ls_return_code) as task_ctx:
+            count, downtime_identifier = task_ctx.set_downtime(nagios_command, downtime_data)
+        # verify new downtimes
+        downtime_filter = filter_to_dict('{"rei": ["comment", "%s"]}' % downtime_identifier)
+        downtime_columns = get_columns_from_get_parameter_or_use_defaults({}, 'downtimes')
+        with LsQueryCtx(ls_query, 'downtimes', downtime_filter, downtime_columns) as downtime_ls_ctx:
+            downtime_return_code, message = downtime_ls_ctx.verify_downtimes(count)
+            return jsonify({"message": message}), downtime_return_code
+    else:
+        # GET request
+        with LivestatusActionCtx(data, ls_return_code) as task_ctx:
+            return task_ctx.return_table()
+
 
 
 # get host by hostname
-@app.route('/%s/host/<host>' % version, methods=['GET', 'POST'])
+@app.route('/%s/hosts/<host>' % version, methods=['GET', 'POST'])
 def get_host_filtered_by_name(host):
-    host_filter = '{"filter":{"eq":["display_name", "%s"]}}' % host
-    host_json = get_table_entries(ls_socket_reader, 'hosts', host_filter, True, make_public_host)
+    entity = 'hosts'
+    query_filter = filter_to_dict('{"eq":["display_name", "%s"]}' % host)
+    columns = get_columns_from_get_parameter_or_use_defaults(request.args, entity)
+    with LsQueryCtx(ls_query, entity, query_filter, columns) as ls_ctx:
+        data, ls_return_code = ls_ctx.query()
     if request.method == 'POST':
-        downtime_datajson = request.get_json(force=True, silent=False, cache=False)
-        try:
-            # check if POST json contains a key 'downtime'
-            downtime_data = downtime_datajson['downtime']
-            downtime_identifier = 'API%06x' % random.randrange(16**6)
-            if 'comment' in downtime_data.keys():
-                downtime_data['comment'] = "%s: %s" % (downtime_identifier, downtime_data['comment'])
-            else:
-                downtime_data['comment'] = "%s: no comment provided" % downtime_identifier
-        except KeyError:
-            raise BadRequestException('Bad request: POST json data doesnt include a downtime key', status_code=400)
-        # check if host is found in Livestatus
-        j, http_returncode = host_json
-        if http_returncode == 200:
-            # overwrite or create host_name key in downtime_data structure
-            downtime_data['host_name'] = host
-            # create NagiosDowntime instance
-            nd = NagiosDowntime()
-            # create downtime command
-            downtime_cmd = nd.create_downtime('HOST', json.dumps(downtime_data))
-            # send downtime command
-            ls_socket_reader.connect()
-            ls_socket_reader.send_command(downtime_cmd)
-            # get the new created downtime via livestatus downtime table and filter 'downtime_identifier'
-            downtime_filter = '{"rei":["comment","%s"]}' % downtime_identifier
-            # allow livestatus some time to set the downtime
-            for i in range(1, 5):
-                time.sleep(1)
-                downtime_json, http_returncode = get_table_entries(ls_socket_reader, 'downtimes', downtime_filter, True,
-                                                                   make_public_downtime)
-                if http_returncode == 404:
-                    pass
-                elif http_returncode == 200 or http_returncode == 500:
-                    return downtime_json, http_returncode
-                else:
-                    return jsonify({"message": "unknown result for querying the new downtime"}), http_returncode
-            # result query timed out
-            return jsonify({"error": "setting downtime did not succeed within 5 seconds "}), 500
-        else:
-            return NoDataException("no such host found in monitoring", status_code=404)
+        downtime_data = request.get_json(force=True, silent=False, cache=False)
+        with LivestatusActionCtx(data, ls_return_code) as task_ctx:
+            count, downtime_identifier = task_ctx.set_downtime(nagios_command, downtime_data)
+        # verify new downtimes
+        downtime_filter = filter_to_dict('{"rei": ["comment", "%s"]}' % downtime_identifier)
+        downtime_columns = get_columns_from_get_parameter_or_use_defaults({}, 'downtimes')
+        with LsQueryCtx(ls_query, 'downtimes', downtime_filter, downtime_columns) as downtime_ls_ctx:
+            downtime_return_code, message = downtime_ls_ctx.verify_downtimes(count)
+            return jsonify({"message": message}), downtime_return_code
     else:
         # respond to GET request
-        return host_json
+        with LivestatusActionCtx(data, ls_return_code) as task_ctx:
+            return task_ctx.return_table()
 
-
-###
-# get columns and descriptions
-@app.route('/%s/columns' % version, methods=['GET'])
-def get_columns():
-    return get_table_entries(ls_socket_reader, 'columns')
 
 ###
 # stats endpoint
 @app.route('/%s/stats/<entity>/<operator>/<column>/<value>' % version, methods=['GET'])
 def get_stats(entity, operator, column, value):
     stats_filter = get_filter_from_get_parameter(request.args)
-    stats_query = LsQuery()
-    if stats_filter:
-        stats_query.set_filter(json.loads(stats_filter))
-    stats_query.create_stats_query(entity, column, operator, value)
-    ls_socket_reader.connect()
-    ls_socket_reader.send_query(stats_query)
-    data = ls_socket_reader.read_query_result(stats_query)
-    if data[0] == 200:
-        return_data = data[1][0]
-        ls_return_code = 200
-    else:
-        return_data = {
-            'message': data[1]
-        }
-        ls_return_code = data[0]
-    return jsonify(return_data), ls_return_code
+    ls_query.set_filter(stats_filter)
+    ls_query.create_stats_query(entity, column, operator, value)
+    data, ls_return_code = ls_query.query()
+    return jsonify(data[entity][0]), ls_return_code
 
 
 # error handlers and helpers
@@ -288,18 +259,27 @@ def get_stats(entity, operator, column, value):
 @app.errorhandler(BadFilterException)
 @app.errorhandler(BadRequestException)
 @app.errorhandler(LivestatusSocketException)
+@app.errorhandler(InternalProcessingException)
 def handle_api_exceptions(error):
     response = jsonify(error.to_dict())
     response.status_code = error.status_code
     return response
 
+
 @app.errorhandler(404)
-def page_not_found(e):
+def page_not_found():
     return jsonify({"message": "resource not found"}), 404
 
+
+@app.errorhandler(405)
+def method_not_allowed():
+    return jsonify({"message": "method not allowed"}), 405
+
+
 @app.errorhandler(500)
-def internal_server_error(e):
+def internal_server_error():
     return jsonify({"message": "internal server error"}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)
