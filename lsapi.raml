@@ -3,69 +3,110 @@
 title: Livestatus API
 baseUri: http://localhost:5000/{version}/
 version: v1
+mediaType: application/json
+
+traits:
+    - filter_enabled:
+        queryParameters:
+            filter:
+                description: a filter expressed as json structure
+                type: string
+                required: false
+                example: '{"rei":["display_name","example.com"]}'
+    - column_selectable:
+        queryParameters:
+            columns:
+                description: a list of columns to be returned. Espressed as json array
+                type: string
+                required: false
+                example: '["host_display_name", "acknowleged"]
+    - downtimeable:
+        body:
+            description: | A downtime expressed as json structure.
+                Applicable to services and hosts
+            application/json:
+                schema: !include downtime.schema.json
+                example: |
+                    { "downtime":
+                        {
+                            "start_time": 1757940301,
+                            "end_time": 1789476309,
+                            "author": "coelmueller",
+                            "comment": "a test"
+                        }
+                    }
+
 
 /hosts:
+    displayName: Hosts Endpoint
     get:
-        queryParameters:
-            filter: JSON
-                required: false
-
-/host/{hostname}:
-    get:
+        description: Get hosts from Livestatus. May be filtered via get parameter filter
+        is: [filter_enabled, column_selectable]
     post:
-        queryParameters:
-            downtime:
-                downtimeJson: JSON
-                required: true
+        description: Set a downtime multiple hosts. A filter must be given
+        is: [filter_enabled, downtimeable]
+
+/hosts/{hostname}:
+    get:
+        description: Get a single host from Livestatus
+        is: [column_selectable]
+    post:
+        description: Set a downtime on this host
+        is: [downtimeable]
 
 /services:
+    displayName: Services Endpoint
     get:
-        queryParameters:
-            filter: JSON
-                required: false
+        description: Get services from Livestatus. May be filtered via get parameter filter
+        is: [filter_enabled, column_selectable]
     post:
-        queryParameter:
-            filter: JSON
-                required: true
-            downtime: JSON
-                required: true
-
+        description: Set a downtime on multiple services. A filter must be given
+        is: [filter_enabled, downtimeable]
     /{hostname}:
         get:
+            description: Get all services from {hostname}
+            is: [filter_enabled, column_selectable]
         post:
-            queryParameters:
-                downtime: JSON
-                    required: true
+            description: Set downtime on all services of this host
+            is: [downtimeable]
         /{servicename}:
             get:
+                description: Get a single service {servicename} of a single host
+                is: [filter_enabled, column_selectable]
             post:
-                queryParameters:
-                    downtime: JSON
-                        required: true
+                description: Set a downtime on a single service
+                is: [downtimeable]
 
 /downtimes:
+    displayName: Downtimes Endpoint
     get:
-        queryParameters:
-            filter: JSON
-                required: false
+        description: Get all downtimes. May be filtered via get parameter filter
+        is: [filter_enabled, column_selectable]
     delete:
-        queryParameters:
-            filter: JSON
-                required: true
-
-/downtime/{id}:
-    get:
-    delete:
+        description: Delete multiple downtimes. A filter must be given
+        is: [filter_enabled]
+    {id}:
+        get:
+            description: Get downtime by id
+            is: [filter_enabled, column_selectable]
+        delete:
+            description: Delete a single downtime
+            is: [filter_enabled]
 
 /columns:
+    displayName: Columns Endpoint
     get:
+        description: Get available columns from Livestatus. May be filtered via get parameter filter
+        is: [filter_enabled, column_selectable]
 
-/comments
+/comments:
+    displayName: Comments Endpoint
     get:
-        queryParameters:
+        description: Get comments from Livestatus. May be filtered via get parameter filter
+        is: [filter_enabled, column_selectable]
+
 
 /stats/{table}/{operator}/{column}/{value}:
     get:
-        queryParameters:
-            filter: JSON
-                required: false
+        description: Get stats from Livestatus. May be filtered via get parameter filter
+        is: [filter_enabled]
