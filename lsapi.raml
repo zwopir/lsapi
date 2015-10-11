@@ -19,22 +19,21 @@ traits:
                 description: a list of columns to be returned. Espressed as json array
                 type: string
                 required: false
-                example: '["host_display_name", "acknowleged"]
+                example: '["host_display_name", "acknowleged"]'
     - downtimeable:
         body:
-            description: | A downtime expressed as json structure.
-                Applicable to services and hosts
+            description: A downtime expressed as json structure. Applicable to services and hosts
             application/json:
-                schema: !include downtime.schema.json
+                schema:
                 example: |
-                    { "downtime":
+                    '{ "downtime":
                         {
                             "start_time": 1757940301,
                             "end_time": 1789476309,
                             "author": "coelmueller",
                             "comment": "a test"
                         }
-                    }
+                    }'
 
 
 /hosts:
@@ -45,14 +44,13 @@ traits:
     post:
         description: Set a downtime multiple hosts. A filter must be given
         is: [filter_enabled, downtimeable]
-
-/hosts/{hostname}:
-    get:
-        description: Get a single host from Livestatus
-        is: [column_selectable]
-    post:
-        description: Set a downtime on this host
-        is: [downtimeable]
+    /{hostname}:
+        get:
+            description: Get a single host from Livestatus
+            is: [column_selectable]
+        post:
+            description: Set a downtime on this host
+            is: [downtimeable]
 
 /services:
     displayName: Services Endpoint
@@ -85,7 +83,7 @@ traits:
     delete:
         description: Delete multiple downtimes. A filter must be given
         is: [filter_enabled]
-    {id}:
+    /{id}:
         get:
             description: Get downtime by id
             is: [filter_enabled, column_selectable]
@@ -107,6 +105,7 @@ traits:
 
 
 /stats/{table}/{operator}/{column}/{value}:
+    displayName: Stats Endpoint
     get:
         description: Get stats from Livestatus. May be filtered via get parameter filter
         is: [filter_enabled]

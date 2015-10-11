@@ -4,6 +4,7 @@ import urllib
 from flask import Flask, request, jsonify
 from model.lsquery import LsQuery, LsQueryCtx
 from model.nagioscommands import NagiosCommand
+from model.socket_communication import LsSocket
 from api_exceptions import \
     FilterParsingException, \
     NoDataException, \
@@ -22,7 +23,7 @@ from configuration.socket_config import SocketConfiguration
 
 # TODO: class and def documentations
 # TODO: multi-downtimes
-#  TODO: write tests
+# TODO: write tests
 
 app = Flask(__name__)
 
@@ -31,14 +32,14 @@ version = 'v1'
 
 
 config = SocketConfiguration(__file__)
-ls_socket_reader = config.get_socket_reader_instance()
 
+ls_accessor = LsSocket(config.connection_string, config.connection_type)
 # init LS query class
-ls_query = LsQuery(ls_socket_reader)
+ls_query = LsQuery(ls_accessor)
 
 # init LS downtime class
-nagios_command = NagiosCommand(ls_socket_reader)
-
+#nagios_command = NagiosCommand(ls_accessor)
+nagios_command = None
 
 @app.route('/%s/columns' % version, methods=['GET'])
 def get_columns():
@@ -215,8 +216,6 @@ def get_hosts():
         with LivestatusActionCtx(data, ls_return_code) as task_ctx:
             return task_ctx.return_table()
 
-
-
 # get host by hostname
 @app.route('/%s/hosts/<host>' % version, methods=['GET', 'POST'])
 def get_host_filtered_by_name(host):
@@ -267,17 +266,17 @@ def handle_api_exceptions(error):
 
 
 @app.errorhandler(404)
-def page_not_found():
+def page_not_found(_):
     return jsonify({"message": "resource not found"}), 404
 
 
 @app.errorhandler(405)
-def method_not_allowed():
+def method_not_allowed(_):
     return jsonify({"message": "method not allowed"}), 405
 
 
 @app.errorhandler(500)
-def internal_server_error():
+def internal_server_error(_):
     return jsonify({"message": "internal server error"}), 500
 
 

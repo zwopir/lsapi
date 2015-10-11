@@ -19,13 +19,12 @@ class SocketConfiguration:
         self.connection_host = config.get('connection', 'host', 'localhost')
         self.connection_port = int(config.get('connection', 'port', 6557))
         self.connection_file = config.get('connection', 'socketfile', '/omd/sites/monitoring/tmp/run/live')
-
-    def get_socket_reader_instance(self):
+        # get connection string
         if self.connection_type == 'AF_INET':
-            ls_socket_reader = LsSocket((self.connection_host, self.connection_port), self.connection_type)
+            self.connection_string = (self.connection_host, self.connection_port)
+            # self.ls_accessor = LsSocket((self.connection_host, self.connection_port), self.connection_type)
         elif self.connection_type == 'AF_UNIX':
-            ls_socket_reader = LsSocket(self.connection_file, self.connection_type)
+            self.connection_string = self.connection_file
+            # self.ls_accessor = LsSocket(self.connection_file, self.connection_type)
         else:
-            raise ValueError("connection type must be either AF_INET or AF_UNIX")
-            sys.exit(1)
-        return ls_socket_reader
+            raise SystemExit("connection type must be either AF_INET or AF_UNIX")

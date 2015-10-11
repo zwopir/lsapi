@@ -60,12 +60,10 @@ KNOWN_TABLES = [key for key in DEFAULT_COLUMNS]
 MANDATORY_COLUMNS = {
     "hosts": [
         "display_name",
-        "is_service"
     ],
     "services": [
         "host_display_name",
         "display_name",
-        "is_service"
     ],
     "downtimes": [
         "id",

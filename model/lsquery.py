@@ -87,8 +87,8 @@ class LsQuery:
         if not self.ls_accessor:
             raise LivestatusSocketException("Livestatus Socket Error (livestatus accessor uninitialized)", status_code=500)
         self.ls_accessor.connect()
-        self.ls_accessor.send(self.querystring)
-        data = self.ls_accessor.read_query_result(self.fields)
+        self.ls_accessor.send(self)
+        data = self.ls_accessor.read_query_result(self)
         return_data = {}
         if data[0] == 200:
             return_data[self.entity] = data[1]
@@ -107,6 +107,7 @@ class LsQuery:
             time.sleep(interval)
             self.ls_accessor.connect()
             self.ls_accessor.send(self.querystring)
+            # TODO: don't read in as list, but as (returncode, data)
             data = self.ls_accessor.read_query_result(self.fields)
             if data[0] == 200:
                 # query succeeded. Let's count
