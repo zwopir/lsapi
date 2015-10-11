@@ -2,7 +2,6 @@ import csv
 import socket
 
 from api_exceptions import LivestatusSocketException
-from model.lsquery import LsQuery
 
 
 __author__ = 'oelmuellerc'

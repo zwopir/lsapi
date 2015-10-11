@@ -38,8 +38,7 @@ ls_accessor = LsSocket(config.connection_string, config.connection_type)
 ls_query = LsQuery(ls_accessor)
 
 # init LS downtime class
-#nagios_command = NagiosCommand(ls_accessor)
-nagios_command = None
+nagios_command = NagiosCommand(ls_accessor)
 
 @app.route('/%s/columns' % version, methods=['GET'])
 def get_columns():

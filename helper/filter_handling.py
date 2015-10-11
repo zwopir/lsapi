@@ -9,19 +9,19 @@ def get_filter_from_get_parameter(get_args):
     # parameter list given, but "filter" not in list
     # parameter list given including filter
     try:
-        filter = get_args.get('filter', None)
-        if filter:
-            filter_dict = json.loads(filter)
+        filter_arg = get_args.get('filter', None)
+        if filter_arg:
+            filter_dict = json.loads(filter_arg)
             if 'filter' in filter_dict:
-                retval = filter_dict['filter']
+                return_value = filter_dict['filter']
             else:
-                retval = filter_dict
+                return_value = filter_dict
         else:
-            retval = {}
+            return_value = {}
     except ValueError:
         # get parameter doesn't contain filter element
         raise BadFilterException("filter parameter can't be parsed as json", status_code=400)
-    return retval
+    return return_value
 
 
 def filter_to_dict(filter_string):
@@ -36,18 +36,17 @@ def filter_to_dict(filter_string):
 
 
 def get_columns_from_get_parameter_or_use_defaults(get_args, entity):
-    if get_args.has_key('columns'):
+    if 'columns' in get_args:
         try:
             columns = json.loads(get_args.get('columns'))
             for ensurable in MANDATORY_COLUMNS[entity]:
                 if ensurable not in columns:
                     columns.append(ensurable)
-            if isinstance(columns, list):
                 return columns
-            else:
-                raise BadRequestException("can't convert parameter columns to a list. Must be a json array")
         except ValueError as ve_ex:
             raise BadRequestException("cannot parse columns parameter (exception was: %s)" % str(ve_ex), status_code=400)
+        except AttributeError as ae:
+            raise BadRequestException("can't convert parameter columns to a list", status_code=400)
     else:
         return DEFAULT_COLUMNS[entity]
 

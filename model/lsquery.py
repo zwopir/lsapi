@@ -106,9 +106,9 @@ class LsQuery:
         for t in range(0, tries):
             time.sleep(interval)
             self.ls_accessor.connect()
-            self.ls_accessor.send(self.querystring)
+            self.ls_accessor.send(self)
             # TODO: don't read in as list, but as (returncode, data)
-            data = self.ls_accessor.read_query_result(self.fields)
+            data = self.ls_accessor.read_query_result(self)
             if data[0] == 200:
                 # query succeeded. Let's count
                 return_data = data[1]

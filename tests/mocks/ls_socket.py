@@ -5,7 +5,6 @@ import os
 class LsSocketMocks:
 
     def __init__(self, connection_parameter, socket_type='AF_INET'):
-        print "initializing mocked LsSocket instance (%s)" % self.__class__
         self.socket_type = socket_type
         self.ls_reader_object = None
         self.connection_parameter = connection_parameter
