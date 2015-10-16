@@ -27,8 +27,8 @@ class LsSocketMocks:
             :type tuple(int, dict)
         """
         datafile = os.path.dirname(__file__) + '/../fixtures/' + query_object.entity + '.json'
-        with open(datafile) as host_data_file:
-            return_data = json.load(host_data_file)
+        with open(datafile) as data_file:
+            return_data = json.load(data_file)
         return 200, return_data
 
     def disconnect(self):
