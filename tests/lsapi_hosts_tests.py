@@ -5,7 +5,7 @@ from tests.mocks.ls_socket import LsSocketMocks
 import urllib
 
 
-class LsapiTestCase(unittest.TestCase):
+class LsapiHostsTestCase(unittest.TestCase):
     version = 'v1'
     testhost = 'host-aut-1af.example.com'
     host_filter_correct = '{"eq":["display_name","%s"]}' % testhost
@@ -96,7 +96,6 @@ class LsapiTestCase(unittest.TestCase):
     # with message: "downtimes not found within 5 seconds"
     # thats ok, because we actually don't set any downtime
     @patch('lsapi.ls_query.ls_accessor', new=LsSocketMocks('lsquery mock'))
-    @patch('lsapi.nagios_command.ls_accessor', new=LsSocketMocks('nagios command mock'))
     def test_hosts_post(self):
         get_parameter = urllib.quote_plus('%s' % self.host_filter_correct)
         response = self.app.post('%s/hosts?filter=%s' % (self.version, get_parameter), data=self.downtime_data)

@@ -30,6 +30,8 @@ DEFAULT_COLUMNS = {
         "comment",
         "duration",
         "start_time",
+        "service_state",
+        "host_state",
         "end_time",
         "entry_time",
         "fixed",
@@ -91,7 +93,9 @@ INTEGER_COLUMNS = [
     "acknowledged",
     "entry_type",
     "expires",
-    "is_service"
+    "is_service",
+    "service_state",
+    "host_state"
 ]
 
 FILTER_CMP_OPERATORS = {
@@ -114,5 +118,31 @@ FILTER_BOOL_OPERATORS = {
     'or': 'Or',
     'negate': 'Negate'
 }
+
+MANDATORY_HOST_SCHEDULE_PARAMETER = [
+    'host_name',
+    'start_time',
+    'end_time',
+    'author',
+    'comment'
+]
+MANDATORY_SVC_SCHEDULE_PARAMETER = [
+    'host_name',
+    'service_description',
+    'start_time',
+    'end_time',
+    'author',
+    'comment'
+]
+HOST_SCHEDULE_PARAMETER = [
+    'host_name',
+    'start_time',
+    'end_time',
+    'fixed',
+    'trigger_id',
+    'duration',
+    'author',
+    'comment'
+]
 
 

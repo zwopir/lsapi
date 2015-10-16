@@ -3,7 +3,6 @@ from __future__ import print_function
 import urllib
 from flask import Flask, request, jsonify
 from model.lsquery import LsQuery, LsQueryCtx
-from model.nagioscommands import NagiosCommand
 from model.socket_communication import LsSocket
 from api_exceptions import \
     FilterParsingException, \
@@ -22,7 +21,6 @@ from configuration.socket_config import SocketConfiguration
 
 
 # TODO: class and def documentations
-# TODO: multi-downtimes
 # TODO: write tests
 
 app = Flask(__name__)
@@ -36,9 +34,6 @@ config = SocketConfiguration(__file__)
 ls_accessor = LsSocket(config.connection_string, config.connection_type)
 # init LS query class
 ls_query = LsQuery(ls_accessor)
-
-# init LS downtime class
-nagios_command = NagiosCommand(ls_accessor)
 
 @app.route('/%s/columns' % version, methods=['GET'])
 def get_columns():
@@ -86,15 +81,14 @@ def g_downtime():
     query_filter = get_filter_from_get_parameter(request.args)
     with LsQueryCtx(ls_query, entity, query_filter, columns) as ls_ctx:
         data, ls_return_code = ls_ctx.query()
-        if request.method == 'GET':
-            with LivestatusActionCtx(data, ls_return_code) as task_ctx:
+        with LivestatusActionCtx(data, ls_return_code) as task_ctx:
+            if request.method == 'GET':
                 return task_ctx.return_table()
-        elif request.method == 'DELETE':
-            if query_filter:
-                with LivestatusActionCtx(data, ls_return_code) as task_ctx:
-                    return task_ctx.delete_downtime(nagios_command)
-            else:
-                raise BadRequestException("no filter given, not deleting all downtimes", status_code=400)
+            elif request.method == 'DELETE':
+                if query_filter:
+                    return task_ctx.delete_downtime(ls_ctx)
+                else:
+                    raise BadRequestException("no filter given, not deleting all downtimes", status_code=400)
 
 
 # by id. View (GET) and Delete (DELETE)
@@ -109,7 +103,8 @@ def get_downtime(downtime_id):
             if request.method == 'GET':
                 return task_ctx.return_table()
             elif request.method == 'DELETE':
-                return task_ctx.delete_downtime(nagios_command)
+                return task_ctx.delete_downtime(ls_ctx)
+
 
 
 # SERVICES
@@ -121,22 +116,22 @@ def get_services():
     columns = get_columns_from_get_parameter_or_use_defaults(request.args, entity)
     with LsQueryCtx(ls_query, entity, query_filter, columns) as ls_ctx:
         data, ls_return_code = ls_ctx.query()
-    if request.method == 'POST':
-        if not query_filter:
-            raise BadRequestException("no filter given, not setting downtime on all services", status_code=400)
-        downtime_data = request.get_json(force=True, silent=False, cache=False)
         with LivestatusActionCtx(data, ls_return_code) as task_ctx:
-            count, downtime_identifier = task_ctx.set_downtime(nagios_command, downtime_data)
-        # verify new downtimes
-        downtime_filter = filter_to_dict('{"rei": ["comment", "%s"]}' % downtime_identifier)
-        downtime_columns = get_columns_from_get_parameter_or_use_defaults({}, 'downtimes')
-        with LsQueryCtx(ls_query, 'downtimes', downtime_filter, downtime_columns) as downtime_ls_ctx:
-            downtime_return_code, message = downtime_ls_ctx.verify_downtimes(count)
-            return jsonify({"message": message}), downtime_return_code
-    else:
-        # GET request
-        with LivestatusActionCtx(data, ls_return_code) as task_ctx:
-            return task_ctx.return_table()
+            if request.method == 'POST':
+                if not query_filter:
+                    raise BadRequestException("no filter given, not setting downtime on all services", status_code=400)
+                downtime_data = request.get_json(force=True, silent=False, cache=False)
+                count, downtime_identifier = task_ctx.set_downtime(ls_ctx, downtime_data)
+                # verify new downtimes
+                downtime_filter = filter_to_dict('{"rei": ["comment", "%s"]}' % downtime_identifier)
+                downtime_columns = get_columns_from_get_parameter_or_use_defaults({}, 'downtimes')
+                with LsQueryCtx(ls_query, 'downtimes', downtime_filter, downtime_columns) as downtime_ls_ctx:
+                    downtime_return_code, message = downtime_ls_ctx.verify_downtimes(count)
+                    return jsonify({"message": message}), downtime_return_code
+            else:
+                # GET request
+                return task_ctx.return_table()
+
 
 
 # get services by host
@@ -147,20 +142,18 @@ def get_services_filtered_by_host(host):
     columns = get_columns_from_get_parameter_or_use_defaults(request.args, entity)
     with LsQueryCtx(ls_query, entity, query_filter, columns) as ls_ctx:
         data, ls_return_code = ls_ctx.query()
-    if request.method == 'POST':
-        downtime_data = request.get_json(force=True, silent=False, cache=False)
         with LivestatusActionCtx(data, ls_return_code) as task_ctx:
-            count, downtime_identifier = task_ctx.set_downtime(nagios_command, downtime_data)
-        # verify new downtimes
-        downtime_filter = filter_to_dict('{"rei": ["comment", "%s"]}' % downtime_identifier)
-        downtime_columns = get_columns_from_get_parameter_or_use_defaults({}, 'downtimes')
-        with LsQueryCtx(ls_query, 'downtimes', downtime_filter, downtime_columns) as downtime_ls_ctx:
-            downtime_return_code, message = downtime_ls_ctx.verify_downtimes(count)
-            return jsonify({"message": message}), downtime_return_code
-    else:
-        # GET request
-        with LivestatusActionCtx(data, ls_return_code) as task_ctx:
-            return task_ctx.return_table()
+            if request.method == 'POST':
+                downtime_data = request.get_json(force=True, silent=False, cache=False)
+                count, downtime_identifier = task_ctx.set_downtime(ls_ctx, downtime_data)
+                # verify new downtimes
+                downtime_filter = filter_to_dict('{"rei": ["comment", "%s"]}' % downtime_identifier)
+                downtime_columns = get_columns_from_get_parameter_or_use_defaults({}, 'downtimes')
+                with LsQueryCtx(ls_query, 'downtimes', downtime_filter, downtime_columns) as downtime_ls_ctx:
+                    downtime_return_code, message = downtime_ls_ctx.verify_downtimes(count)
+                    return jsonify({"message": message}), downtime_return_code
+            else:
+                return task_ctx.return_table()
 
 
 # get service by host and service
@@ -173,20 +166,18 @@ def get_service_filtered_by_host_and_service(host, service):
     columns = get_columns_from_get_parameter_or_use_defaults(request.args, entity)
     with LsQueryCtx(ls_query, entity, query_filter, columns) as ls_ctx:
         data, ls_return_code = ls_ctx.query()
-    if request.method == 'POST':
-        downtime_data = request.get_json(force=True, silent=False, cache=False)
         with LivestatusActionCtx(data, ls_return_code) as task_ctx:
-            count, downtime_identifier = task_ctx.set_downtime(nagios_command, downtime_data)
-        # verify new downtimes
-        downtime_filter = filter_to_dict('{"rei": ["comment", "%s"]}' % downtime_identifier)
-        downtime_columns = get_columns_from_get_parameter_or_use_defaults({}, 'downtimes')
-        with LsQueryCtx(ls_query, 'downtimes', downtime_filter, downtime_columns) as downtime_ls_ctx:
-            downtime_return_code, message = downtime_ls_ctx.verify_downtimes(count)
-            return jsonify({"message": message}), downtime_return_code
-    else:
-        # GET request
-        with LivestatusActionCtx(data, ls_return_code) as task_ctx:
-            return task_ctx.return_table()
+            if request.method == 'POST':
+                downtime_data = request.get_json(force=True, silent=False, cache=False)
+                count, downtime_identifier = task_ctx.set_downtime(ls_ctx, downtime_data)
+                # verify new downtimes
+                downtime_filter = filter_to_dict('{"rei": ["comment", "%s"]}' % downtime_identifier)
+                downtime_columns = get_columns_from_get_parameter_or_use_defaults({}, 'downtimes')
+                with LsQueryCtx(ls_query, 'downtimes', downtime_filter, downtime_columns) as downtime_ls_ctx:
+                    downtime_return_code, message = downtime_ls_ctx.verify_downtimes(count)
+                    return jsonify({"message": message}), downtime_return_code
+            else:
+                return task_ctx.return_table()
 
 
 # HOSTS
@@ -198,22 +189,21 @@ def get_hosts():
     columns = get_columns_from_get_parameter_or_use_defaults(request.args, entity)
     with LsQueryCtx(ls_query, entity, query_filter, columns) as ls_ctx:
         data, ls_return_code = ls_ctx.query()
-    if request.method == 'POST':
-        if not query_filter:
-            raise BadRequestException("no filter given, not setting downtime on all hosts", status_code=400)
-        downtime_data = request.get_json(force=True, silent=False, cache=False)
         with LivestatusActionCtx(data, ls_return_code) as task_ctx:
-            count, downtime_identifier = task_ctx.set_downtime(nagios_command, downtime_data)
-        # verify new downtimes
-        downtime_filter = filter_to_dict('{"rei": ["comment", "%s"]}' % downtime_identifier)
-        downtime_columns = get_columns_from_get_parameter_or_use_defaults({}, 'downtimes')
-        with LsQueryCtx(ls_query, 'downtimes', downtime_filter, downtime_columns) as downtime_ls_ctx:
-            downtime_return_code, message = downtime_ls_ctx.verify_downtimes(count)
-            return jsonify({"message": message}), downtime_return_code
-    else:
-        # GET request
-        with LivestatusActionCtx(data, ls_return_code) as task_ctx:
-            return task_ctx.return_table()
+            if request.method == 'POST':
+                if not query_filter:
+                    raise BadRequestException("no filter given, not setting downtime on all hosts", status_code=400)
+                downtime_data = request.get_json(force=True, silent=False, cache=False)
+                count, downtime_identifier = task_ctx.set_downtime(ls_ctx, downtime_data)
+                # verify new downtimes
+                downtime_filter = filter_to_dict('{"rei": ["comment", "%s"]}' % downtime_identifier)
+                downtime_columns = get_columns_from_get_parameter_or_use_defaults({}, 'downtimes')
+                with LsQueryCtx(ls_query, 'downtimes', downtime_filter, downtime_columns) as downtime_ls_ctx:
+                    downtime_return_code, message = downtime_ls_ctx.verify_downtimes(count)
+                    return jsonify({"message": message}), downtime_return_code
+            else:
+                # GET request
+                return task_ctx.return_table()
 
 # get host by hostname
 @app.route('/%s/hosts/<host>' % version, methods=['GET', 'POST'])
@@ -223,20 +213,19 @@ def get_host_filtered_by_name(host):
     columns = get_columns_from_get_parameter_or_use_defaults(request.args, entity)
     with LsQueryCtx(ls_query, entity, query_filter, columns) as ls_ctx:
         data, ls_return_code = ls_ctx.query()
-    if request.method == 'POST':
-        downtime_data = request.get_json(force=True, silent=False, cache=False)
         with LivestatusActionCtx(data, ls_return_code) as task_ctx:
-            count, downtime_identifier = task_ctx.set_downtime(nagios_command, downtime_data)
-        # verify new downtimes
-        downtime_filter = filter_to_dict('{"rei": ["comment", "%s"]}' % downtime_identifier)
-        downtime_columns = get_columns_from_get_parameter_or_use_defaults({}, 'downtimes')
-        with LsQueryCtx(ls_query, 'downtimes', downtime_filter, downtime_columns) as downtime_ls_ctx:
-            downtime_return_code, message = downtime_ls_ctx.verify_downtimes(count)
-            return jsonify({"message": message}), downtime_return_code
-    else:
-        # respond to GET request
-        with LivestatusActionCtx(data, ls_return_code) as task_ctx:
-            return task_ctx.return_table()
+            if request.method == 'POST':
+                downtime_data = request.get_json(force=True, silent=False, cache=False)
+                count, downtime_identifier = task_ctx.set_downtime(ls_ctx, downtime_data)
+                # verify new downtimes
+                downtime_filter = filter_to_dict('{"rei": ["comment", "%s"]}' % downtime_identifier)
+                downtime_columns = get_columns_from_get_parameter_or_use_defaults({}, 'downtimes')
+                with LsQueryCtx(ls_query, 'downtimes', downtime_filter, downtime_columns) as downtime_ls_ctx:
+                    downtime_return_code, message = downtime_ls_ctx.verify_downtimes(count)
+                    return jsonify({"message": message}), downtime_return_code
+            else:
+                # GET request
+                return task_ctx.return_table()
 
 
 ###

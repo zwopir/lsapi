@@ -1,9 +1,17 @@
 from __future__ import print_function
 import StringIO
 import time
-
-from model.defaults import FILTER_CMP_OPERATORS, FILTER_BOOL_OPERATORS, KNOWN_TABLES
-from api_exceptions import FilterParsingException, BadFilterException, NoTableException, LivestatusSocketException
+import datetime
+from model.defaults import FILTER_CMP_OPERATORS, \
+    FILTER_BOOL_OPERATORS, \
+    KNOWN_TABLES, \
+    MANDATORY_HOST_SCHEDULE_PARAMETER, \
+    MANDATORY_SVC_SCHEDULE_PARAMETER
+from api_exceptions import FilterParsingException, \
+    BadFilterException, \
+    NoTableException, \
+    LivestatusSocketException, \
+    InternalProcessingException
 
 
 class LsQuery:
@@ -13,6 +21,10 @@ class LsQuery:
         self.fields = None
         self.entity = None
         self.filter = None
+        self.send_only = False
+
+    def __str__(self):
+        return "LsQuery for %s" % self.entity
 
     def create_table_query(self, entity, fields, query_postfix="OutputFormat: csv\nResponseHeader: fixed16\n"):
         if entity not in KNOWN_TABLES:
@@ -88,15 +100,18 @@ class LsQuery:
             raise LivestatusSocketException("Livestatus Socket Error (livestatus accessor uninitialized)", status_code=500)
         self.ls_accessor.connect()
         self.ls_accessor.send(self)
-        data = self.ls_accessor.read_query_result(self)
-        return_data = {}
-        if data[0] == 200:
-            return_data[self.entity] = data[1]
-            ls_return_code = data[0]
+        if not self.send_only:
+            data = self.ls_accessor.read_query_result(self)
+            return_data = {}
+            if data[0] == 200:
+                return_data[self.entity] = data[1]
+                ls_return_code = data[0]
+            else:
+                return_data['message'] = "livestatus responds '%s'" % data[1]
+                ls_return_code = data[0]
+            return return_data, ls_return_code
         else:
-            return_data['message'] = "livestatus responds '%s'" % data[1]
-            ls_return_code = data[0]
-        return return_data, ls_return_code
+            return {"message": "send nagios command"}, 200
 
     def verify_downtimes(self, expected_entries, tries=5, interval=1):
         if not self.ls_accessor:
@@ -129,6 +144,109 @@ class LsQuery:
         self.filter = None
         self.querystring = None
         self.ls_accessor.disconnect()
+        self.send_only = False
+
+    def create_downtime_query(self, downtime_type, downtime_dict):
+        self.send_only = True
+        if downtime_type == 'HOST':
+            cmd = 'SCHEDULE_HOST_DOWNTIME'
+            MANDATOR_PARAMETERS = MANDATORY_HOST_SCHEDULE_PARAMETER
+        elif downtime_type == 'SVC':
+            cmd = 'SCHEDULE_SVC_DOWNTIME'
+            MANDATOR_PARAMETERS = MANDATORY_SVC_SCHEDULE_PARAMETER
+        else:
+            raise InternalProcessingException("no such downtime type. Must be 'SVC' or 'HOST'", status_code=500)
+
+        # check if all mandatory parameters are given
+        mandatory_parameters_given = True
+        for k in MANDATOR_PARAMETERS:
+            if k not in downtime_dict.keys():
+                mandatory_parameters_given &= False
+        if not mandatory_parameters_given:
+            raise InternalProcessingException("not all mandatory downtime parameters are given", status_code=500)
+
+        # handle optional parameters
+        if 'fixed' not in downtime_dict:
+            # not a fixed downtime
+            downtime_dict['fixed'] = 0
+
+        if 'trigger_id' not in downtime_dict:
+            downtime_dict['trigger_id'] = 0
+
+        # type casting
+        for k in ["start_time", "end_time"]:
+            try:
+                downtime_dict[k] = int(downtime_dict[k])
+            except TypeError:
+                raise InternalProcessingException("time must be specified in unix timestamp format", status_code=500)
+
+        if 'duration' not in downtime_dict:
+            downtime_dict['duration'] = downtime_dict['end_time'] - downtime_dict['start_time']
+        else:
+            try:
+                downtime_dict['duration'] = int(downtime_dict['duration'])
+            except TypeError:
+                raise InternalProcessingException("time must be specified in unix timestamp format", status_code=500)
+
+        # assemble command
+        now = self._timedelta_to_seconds(datetime.datetime.now() - datetime.datetime(1970, 1, 1))
+        if downtime_type == 'HOST':
+            nagios_command = "COMMAND [%d] %s;%s;%d;%d;%d;%d;%d;%s;%s\n" % (
+                int(now),
+                cmd,
+                downtime_dict['host_name'],
+                downtime_dict['start_time'],
+                downtime_dict['end_time'],
+                downtime_dict['fixed'],
+                downtime_dict['trigger_id'],
+                downtime_dict['duration'],
+                downtime_dict['author'],
+                downtime_dict['comment'])
+        else:
+            # downtime_type == 'SVC':
+            nagios_command = "COMMAND [%d] %s;%s;%s;%d;%d;%d;%d;%d;%s;%s\n" % (
+                int(now),
+                cmd,
+                downtime_dict['host_name'],
+                downtime_dict['service_description'],
+                downtime_dict['start_time'],
+                downtime_dict['end_time'],
+                downtime_dict['fixed'],
+                downtime_dict['trigger_id'],
+                downtime_dict['duration'],
+                downtime_dict['author'],
+                downtime_dict['comment'])
+
+        self.querystring = nagios_command
+        return nagios_command
+
+    def delete_downtime_query(self, downtime_type, downtime_id):
+        """
+        delete a downtime
+        :param downtime_type: HOST or SVC
+        :param downtime_id: the downtime's id
+        :return: nagios command string
+        """
+        self.send_only = True
+        if downtime_type not in ['HOST', 'SVC']:
+            raise LivestatusSocketException("no such downtime type, must be HOST or SVC", status_code=500)
+
+        now = self._timedelta_to_seconds(datetime.datetime.now() - datetime.datetime(1970, 1, 1))
+        try:
+            nagios_command = "COMMAND [%d] DEL_%s_DOWNTIME;%d\n" % (now, downtime_type, int(downtime_id))
+        except TypeError:
+            InternalProcessingException("downtime id must be an integer", status_code=500)
+        self.querystring = nagios_command
+        return nagios_command
+
+    def _timedelta_to_seconds(self, td):
+        """
+        convert a timedelta object to seconds
+        :param td:
+        :return: timedelta in seconds, rounded to int
+        """
+        # python 2.7 has total_seconds, but in case we're using python 2.6...
+        return int((td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6)
 
 
 class LsQueryCtx:

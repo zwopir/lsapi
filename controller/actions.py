@@ -9,8 +9,6 @@ from helper.result_manipulations import \
     comments2array, \
     downtimes2array, \
     cast_fields
-from helper.filter_handling import filter_to_dict, get_columns_from_get_parameter_or_use_defaults
-import time
 import random
 
 
@@ -33,7 +31,7 @@ class LivestatusAction:
         else:
             self.entity = entities[0]
         # determine if we got a single element or array
-        if isinstance(self.data[entity], list):
+        if len(self.data[self.entity]) > 1:
             self.single = False
         else:
             self.single = True
@@ -60,7 +58,7 @@ class LivestatusAction:
         else:
             return jsonify(self.data), self.return_code
 
-    def set_downtime(self, nagios_command_instance, downtime_data):
+    def set_downtime(self, ls_query_instance, downtime_data):
         try:
             # check if POST json contains a key 'downtime'
             downtime_data = downtime_data['downtime']
@@ -76,23 +74,24 @@ class LivestatusAction:
         if self.return_code == 200:
             # overwrite or create service_description key in downtime_data structure
             element_count = 0
-            for downtime_element in self.data[self.entity]:
-                if self.entity == 'hosts':
+            for downtime_element in self.data[ls_query_instance.entity]:
+                if ls_query_instance.entity == 'hosts':
                     downtime_type = 'HOST'
                     downtime_data['host_name'] = downtime_element['display_name']
-                elif self.entity == 'services':
+                elif ls_query_instance.entity == 'services':
                     downtime_type = 'SVC'
                     downtime_data['service_description'] = downtime_element['display_name']
                     downtime_data['host_name'] = downtime_element['host_display_name']
                 else:
                     raise InternalProcessingException("downtimes can only be set on hosts or services", status_code=500)
-                _ = nagios_command_instance.create_downtime(downtime_type, downtime_data)
+                _ = ls_query_instance.create_downtime_query(downtime_type, downtime_data)
+                ls_query_instance.query()
                 element_count += 1
             return element_count, downtime_identifier
         else:
             return jsonify(self.data), self.return_code
 
-    def delete_downtime(self, nagios_command_instance):
+    def delete_downtime(self, ls_query_instance):
         if "downtimes" not in self.data:
             raise InternalProcessingException("downtime not found", status_code=404)
         if self.return_code == 200:
@@ -102,7 +101,8 @@ class LivestatusAction:
                     downtime_type = 'HOST'
                 else:
                     downtime_type = 'SVC'
-                cmd = nagios_command_instance.delete_downtime(downtime_type, downtime["id"])
+                cmd = ls_query_instance.delete_downtime_query(downtime_type, downtime["id"])
+                ls_query_instance.query()
                 deleted_downtimes.append({
                     "id": int(downtime["id"]),
                     "command": cmd
