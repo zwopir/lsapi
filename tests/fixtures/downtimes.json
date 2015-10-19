@@ -1,5 +1,4 @@
-{
-  "downtimes": [
+[
     {
       "author": "fb2511", 
       "comment": "known problem", 
@@ -10,9 +9,8 @@
       "host_display_name": "host-eng-1af.example.com", 
       "id": 106, 
       "is_service": 1, 
-      "service_display_name": "check_engine_tkuev_queue_age", 
-      "start_time": 1423226830, 
-      "uri": "http://localhost:5000/v1/downtimes/106"
+      "service_display_name": "test_downtime_service_name",
+      "start_time": 1423226830
     }, 
     {
       "author": "fb2511", 
@@ -25,8 +23,7 @@
       "id": 110, 
       "is_service": 1, 
       "service_display_name": "check_engine_delete_queue_age", 
-      "start_time": 1423226830, 
-      "uri": "http://localhost:5000/v1/downtimes/110"
+      "start_time": 1423226830
     }, 
     {
       "author": "fb2511", 
@@ -39,8 +36,7 @@
       "id": 113, 
       "is_service": 1, 
       "service_display_name": "check_engine_tkuev_queue_size", 
-      "start_time": 1423226830, 
-      "uri": "http://localhost:5000/v1/downtimes/113"
+      "start_time": 1423226830
     }, 
     {
       "author": "fb2511", 
@@ -53,8 +49,7 @@
       "id": 114, 
       "is_service": 1, 
       "service_display_name": "check_engine_tkuev_queue_size", 
-      "start_time": 1423226830, 
-      "uri": "http://localhost:5000/v1/downtimes/114"
+      "start_time": 1423226830
     }, 
     {
       "author": "fb2511", 
@@ -67,8 +62,7 @@
       "id": 115, 
       "is_service": 1, 
       "service_display_name": "check_engine_delete_queue_age", 
-      "start_time": 1423226830, 
-      "uri": "http://localhost:5000/v1/downtimes/115"
+      "start_time": 1423226830
     }, 
     {
       "author": "fb4201", 
@@ -81,8 +75,7 @@
       "id": 153, 
       "is_service": 1, 
       "service_display_name": "check_cocosout_ticket_dir", 
-      "start_time": 1424971672, 
-      "uri": "http://localhost:5000/v1/downtimes/153"
+      "start_time": 1424971672
     }, 
     {
       "author": "fb4201", 
@@ -95,8 +88,7 @@
       "id": 154, 
       "is_service": 1, 
       "service_display_name": "check_cocosout_ticket_dir", 
-      "start_time": 1424971672, 
-      "uri": "http://localhost:5000/v1/downtimes/154"
+      "start_time": 1424971672
     }, 
     {
       "author": "fb4223", 
@@ -109,8 +101,7 @@
       "id": 165, 
       "is_service": 1, 
       "service_display_name": "check_cocos_summary_dir", 
-      "start_time": 1426848955, 
-      "uri": "http://localhost:5000/v1/downtimes/165"
+      "start_time": 1426848955
     }, 
     {
       "author": "fb4223", 
@@ -123,8 +114,7 @@
       "id": 166, 
       "is_service": 1, 
       "service_display_name": "check_cocos_summary_dir", 
-      "start_time": 1426848955, 
-      "uri": "http://localhost:5000/v1/downtimes/166"
+      "start_time": 1426848955
     }, 
     {
       "author": "fb4223", 
@@ -137,8 +127,7 @@
       "id": 199, 
       "is_service": 1, 
       "service_display_name": "check_cocos_ticket_dir", 
-      "start_time": 1430838360, 
-      "uri": "http://localhost:5000/v1/downtimes/199"
+      "start_time": 1430838360
     }, 
     {
       "author": "fb4223", 
@@ -151,8 +140,7 @@
       "id": 200, 
       "is_service": 1, 
       "service_display_name": "check_cocos_ticket_dir", 
-      "start_time": 1430838360, 
-      "uri": "http://localhost:5000/v1/downtimes/200"
+      "start_time": 1430838360
     }, 
     {
       "author": "fb4223", 
@@ -165,8 +153,7 @@
       "id": 202, 
       "is_service": 1, 
       "service_display_name": "check_cocos_ticket_dir", 
-      "start_time": 1430838360, 
-      "uri": "http://localhost:5000/v1/downtimes/202"
+      "start_time": 1430838360
     }, 
     {
       "author": "fb4223", 
@@ -179,8 +166,7 @@
       "id": 203, 
       "is_service": 1, 
       "service_display_name": "check_kpi_dir", 
-      "start_time": 1430838360, 
-      "uri": "http://localhost:5000/v1/downtimes/203"
+      "start_time": 1430838360
     }, 
     {
       "author": "fb4223", 
@@ -193,9 +179,8 @@
       "id": 205, 
       "is_service": 1, 
       "service_display_name": "check_kpi_dir", 
-      "start_time": 1430838360, 
-      "uri": "http://localhost:5000/v1/downtimes/205"
-    }, 
+      "start_time": 1430838360
+    },
     {
       "author": "fb4223", 
       "comment": "not transferred in test environment", 
@@ -207,8 +192,7 @@
       "id": 206, 
       "is_service": 1, 
       "service_display_name": "gk_check_service_fileage_customers_gmx", 
-      "start_time": 1430838360, 
-      "uri": "http://localhost:5000/v1/downtimes/206"
+      "start_time": 1430838360
     }, 
     {
       "author": "fb4223", 
@@ -221,8 +205,7 @@
       "id": 207, 
       "is_service": 1, 
       "service_display_name": "check_kpi_dir", 
-      "start_time": 1430838360, 
-      "uri": "http://localhost:5000/v1/downtimes/207"
+      "start_time": 1430838360
     }, 
     {
       "author": "fb4223", 
@@ -235,8 +218,7 @@
       "id": 216, 
       "is_service": 1, 
       "service_display_name": "system_openssh_active", 
-      "start_time": 1431440580, 
-      "uri": "http://localhost:5000/v1/downtimes/216"
+      "start_time": 1431440580
     }, 
     {
       "author": "fb4223", 
@@ -249,8 +231,7 @@
       "id": 217, 
       "is_service": 1, 
       "service_display_name": "xkge_configservice_running", 
-      "start_time": 1431440580, 
-      "uri": "http://localhost:5000/v1/downtimes/217"
+      "start_time": 1431440580
     }, 
     {
       "author": "fb4223", 
@@ -263,8 +244,7 @@
       "id": 225, 
       "is_service": 1, 
       "service_display_name": "check_if_enryption_possible", 
-      "start_time": 1432108200, 
-      "uri": "http://localhost:5000/v1/downtimes/225"
+      "start_time": 1432108200
     }, 
     {
       "author": "fb4223", 
@@ -277,8 +257,7 @@
       "id": 245, 
       "is_service": 1, 
       "service_display_name": "check_service_cqa", 
-      "start_time": 1434010610, 
-      "uri": "http://localhost:5000/v1/downtimes/245"
+      "start_time": 1434010610
     }, 
     {
       "author": "fb4223", 
@@ -291,8 +270,7 @@
       "id": 246, 
       "is_service": 1, 
       "service_display_name": "checkUnfinishedBookingTransfers", 
-      "start_time": 1434449839, 
-      "uri": "http://localhost:5000/v1/downtimes/246"
+      "start_time": 1434449839
     }, 
     {
       "author": "fb4223", 
@@ -305,8 +283,7 @@
       "id": 247, 
       "is_service": 1, 
       "service_display_name": "checkUnfinishedBookingTransfers", 
-      "start_time": 1434449839, 
-      "uri": "http://localhost:5000/v1/downtimes/247"
+      "start_time": 1434449839
     }, 
     {
       "author": "fb4223", 
@@ -319,8 +296,7 @@
       "id": 248, 
       "is_service": 1, 
       "service_display_name": "checkUnfinishedBatchStages", 
-      "start_time": 1434449839, 
-      "uri": "http://localhost:5000/v1/downtimes/248"
+      "start_time": 1434449839
     }, 
     {
       "author": "fb4223", 
@@ -333,8 +309,7 @@
       "id": 249, 
       "is_service": 1, 
       "service_display_name": "checkUnfinishedBatchStages", 
-      "start_time": 1434449839, 
-      "uri": "http://localhost:5000/v1/downtimes/249"
+      "start_time": 1434449839
     }, 
     {
       "author": "fb4223", 
@@ -347,8 +322,7 @@
       "id": 250, 
       "is_service": 1, 
       "service_display_name": "checkUnfinishedOrderExports", 
-      "start_time": 1434449839, 
-      "uri": "http://localhost:5000/v1/downtimes/250"
+      "start_time": 1434449839
     }, 
     {
       "author": "fb4223", 
@@ -361,8 +335,7 @@
       "id": 251, 
       "is_service": 1, 
       "service_display_name": "checkUnfinishedOrderExports", 
-      "start_time": 1434449839, 
-      "uri": "http://localhost:5000/v1/downtimes/251"
+      "start_time": 1434449839
     }, 
     {
       "author": "fb2511", 
@@ -375,8 +348,7 @@
       "id": 252, 
       "is_service": 0, 
       "service_display_name": "", 
-      "start_time": 1434979223, 
-      "uri": "http://localhost:5000/v1/downtimes/252"
+      "start_time": 1434979223
     }, 
     {
       "author": "fb2511", 
@@ -389,8 +361,7 @@
       "id": 253, 
       "is_service": 0, 
       "service_display_name": "", 
-      "start_time": 1434979223, 
-      "uri": "http://localhost:5000/v1/downtimes/253"
+      "start_time": 1434979223
     }, 
     {
       "author": "fb2511", 
@@ -403,8 +374,7 @@
       "id": 254, 
       "is_service": 0, 
       "service_display_name": "", 
-      "start_time": 1434979223, 
-      "uri": "http://localhost:5000/v1/downtimes/254"
+      "start_time": 1434979223
     }, 
     {
       "author": "fb2511", 
@@ -417,8 +387,7 @@
       "id": 255, 
       "is_service": 0, 
       "service_display_name": "", 
-      "start_time": 1434979223, 
-      "uri": "http://localhost:5000/v1/downtimes/255"
+      "start_time": 1434979223
     }, 
     {
       "author": "fb2870", 
@@ -431,8 +400,7 @@
       "id": 2245, 
       "is_service": 1, 
       "service_display_name": "running_version", 
-      "start_time": 1444399680, 
-      "uri": "http://localhost:5000/v1/downtimes/2245"
+      "start_time": 1444399680
     }, 
     {
       "author": "fb2870", 
@@ -445,8 +413,7 @@
       "id": 2246, 
       "is_service": 1, 
       "service_display_name": "running_version", 
-      "start_time": 1444399680, 
-      "uri": "http://localhost:5000/v1/downtimes/2246"
+      "start_time": 1444399680
     }
-  ]
-}
+]
+
