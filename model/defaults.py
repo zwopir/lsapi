@@ -72,6 +72,7 @@ MANDATORY_COLUMNS = {
         "is_service"
     ],
     "columns": [
+        "name"
     ],
     "comments": [
         "id",

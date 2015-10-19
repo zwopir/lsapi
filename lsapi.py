@@ -38,8 +38,8 @@ ls_query = LsQuery(ls_accessor)
 @app.route('/%s/columns' % version, methods=['GET'])
 def get_columns():
     entity = 'columns'
-    query_filter = get_filter_from_get_parameter(request.args)
     columns = get_columns_from_get_parameter_or_use_defaults(request.args, entity)
+    query_filter = get_filter_from_get_parameter(request.args)
     with LsQueryCtx(ls_query, entity, query_filter, columns) as ls_ctx:
         data, ls_return_code = ls_ctx.query()
         with LivestatusActionCtx(data, ls_return_code) as task_ctx:
