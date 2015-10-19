@@ -253,6 +253,11 @@ def handle_api_exceptions(error):
     return response
 
 
+@app.errorhandler(400)
+def bad_request(_):
+    return jsonify({"message": "bad request"}), 400
+
+
 @app.errorhandler(404)
 def page_not_found(_):
     return jsonify({"message": "resource not found"}), 404

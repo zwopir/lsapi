@@ -8,7 +8,7 @@ setup(
     download_url='Where to download it.',
     author_email='christoph@oelmueller.info',
     version='0.1',
-    install_requires=['nose', 'paramiko', 'flask', 'ConfigParser'],
+    install_requires=['nose', 'paramiko', 'flask', 'ConfigParser', 'mock'],
     packages=find_packages(exclude=['contrib', 'docs', 'tests*']),
     scripts=[],
     name='lsapi'

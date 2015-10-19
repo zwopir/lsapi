@@ -23,6 +23,18 @@ class LsapiServicesTestCase(unittest.TestCase):
             "comment": "a test downtime"
         }
     }'''
+    downtime_data_incorrect_json = '''{"learn_to_write_json:
+        "foo": 1,
+        []
+    '''
+    downtime_data_missing_values = '''{
+        "downtime": {
+            "start_time": 1757940301,
+            "author": "coelmueller",
+            "comment": "a test downtime"
+        }
+    }'''
+    downtime_data_missing_key = '{"some": "json"}'
 
     def setUp(self):
         lsapi.app.config['TESTING'] = True
@@ -92,7 +104,38 @@ class LsapiServicesTestCase(unittest.TestCase):
         response = self.app.post('%s/services' % self.version, data=self.downtime_data)
         assert response.status_code == 400
         assert "no filter given, not setting downtime on all services" in response.data
-    
+
+    # /services POST endpoint with parameter, but faulty post data (incorrect json)
+    # Should return 400/BAD_REQUEST,
+    @patch('lsapi.ls_query.ls_accessor', new=LsSocketMocks('lsquery mock'))
+    def test_services_post_incorrect_downtime_data(self):
+        get_parameter = urllib.quote_plus('%s' % self.service_filter_correct)
+        response = self.app.post('%s/services?filter=%s' % (self.version, get_parameter),
+                                 data=self.downtime_data_incorrect_json)
+        # print response.status_code
+        assert response.status_code == 400
+        assert "bad request" in response.data
+
+    # /services POST endpoint with parameter, but faulty post data (missing parameter)
+    # Should return 400/BAD_REQUEST,
+    @patch('lsapi.ls_query.ls_accessor', new=LsSocketMocks('lsquery mock'))
+    def test_services_post_missing_downtime_data_element(self):
+        get_parameter = urllib.quote_plus('%s' % self.service_filter_correct)
+        response = self.app.post('%s/services?filter=%s' % (self.version, get_parameter),
+                                 data=self.downtime_data_missing_values)
+        assert response.status_code == 400
+        assert "not all mandatory downtime parameters are given" in response.data
+
+    # /services POST endpoint with parameter, but faulty post data (missing parameter)
+    # Should return 400/BAD_REQUEST,
+    @patch('lsapi.ls_query.ls_accessor', new=LsSocketMocks('lsquery mock'))
+    def test_services_post_missing_downtime_data_key(self):
+        get_parameter = urllib.quote_plus('%s' % self.service_filter_correct)
+        response = self.app.post('%s/services?filter=%s' % (self.version, get_parameter),
+                                 data=self.downtime_data_missing_key)
+        assert response.status_code == 400
+        assert "POST json data doesnt include a downtime key" in response.data
+
     # /services POST endpoint with parameter. Should return 500/INTERNAL_SERVER_ERROR,
     # with message: "downtimes not found within 5 seconds"
     # thats ok, because we actually don't set any downtime

@@ -9,6 +9,7 @@ from model.defaults import FILTER_CMP_OPERATORS, \
     MANDATORY_SVC_SCHEDULE_PARAMETER
 from api_exceptions import FilterParsingException, \
     BadFilterException, \
+    BadRequestException, \
     NoTableException, \
     LivestatusSocketException, \
     InternalProcessingException
@@ -163,7 +164,7 @@ class LsQuery:
             if k not in downtime_dict.keys():
                 mandatory_parameters_given &= False
         if not mandatory_parameters_given:
-            raise InternalProcessingException("not all mandatory downtime parameters are given", status_code=500)
+            raise BadRequestException("not all mandatory downtime parameters are given", status_code=400)
 
         # handle optional parameters
         if 'fixed' not in downtime_dict:
@@ -178,7 +179,7 @@ class LsQuery:
             try:
                 downtime_dict[k] = int(downtime_dict[k])
             except TypeError:
-                raise InternalProcessingException("time must be specified in unix timestamp format", status_code=500)
+                raise BadRequestException("time must be specified in unix timestamp format", status_code=400)
 
         if 'duration' not in downtime_dict:
             downtime_dict['duration'] = downtime_dict['end_time'] - downtime_dict['start_time']
@@ -186,7 +187,7 @@ class LsQuery:
             try:
                 downtime_dict['duration'] = int(downtime_dict['duration'])
             except TypeError:
-                raise InternalProcessingException("time must be specified in unix timestamp format", status_code=500)
+                raise BadRequestException("time must be specified in unix timestamp format", status_code=400)
 
         # assemble command
         now = self._timedelta_to_seconds(datetime.datetime.now() - datetime.datetime(1970, 1, 1))

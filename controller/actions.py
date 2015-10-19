@@ -62,6 +62,7 @@ class LivestatusAction:
         try:
             # check if POST json contains a key 'downtime'
             downtime_data = downtime_data['downtime']
+            # TODO: add downtime data validation (start/end/author
             # add a downtime identifier
             downtime_identifier = 'API%06x' % random.randrange(16**6)
             if 'comment' in downtime_data.keys():
@@ -69,7 +70,7 @@ class LivestatusAction:
             else:
                 downtime_data['comment'] = "%s: no comment provided" % downtime_identifier
         except KeyError:
-            raise BadRequestException('Bad request: POST json data doesnt include a downtime key', status_code=400)
+            raise BadRequestException('POST json data doesnt include a downtime key', status_code=400)
         # check if service or host is found in Livestatus
         if self.return_code == 200:
             # overwrite or create service_description key in downtime_data structure
