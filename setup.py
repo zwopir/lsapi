@@ -4,11 +4,12 @@ from setuptools import setup, find_packages
 setup(
     description='RESTful Nagios/Icinga Livestatus API',
     author='Christoph Oelmueller',
-    url='URL to get it at.',
-    download_url='Where to download it.',
+    url='https://github.com/zwopiR/lsapi',
+    download_url='https://github.com/zwopiR/lsapi',
     author_email='christoph@oelmueller.info',
     version='0.1',
-    install_requires=['nose', 'paramiko', 'flask', 'ConfigParser', 'mock'],
+    install_requires=['flask', 'ConfigParser'],
+    tests_require=['mock', 'nose'],
     packages=find_packages(exclude=['contrib', 'docs', 'tests*']),
     scripts=[],
     name='lsapi'
