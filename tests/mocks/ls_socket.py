@@ -15,9 +15,6 @@ class LsSocketMocks:
     def send(self, query_object):
         pass
 
-    def send_command(self, command):
-        pass
-
     def read_query_result(self, query_object):
         """
             return ready to consume dict structures depending on query_object's
@@ -26,7 +23,12 @@ class LsSocketMocks:
             :return (returncode, data)
             :type tuple(int, dict)
         """
-        datafile = os.path.dirname(__file__) + '/../fixtures/' + query_object.entity + '.json'
+        if "GET %s\nStats" % query_object.entity in query_object.querystring:
+            prefix = 'stats_'
+        else:
+            prefix = ''
+
+        datafile = os.path.dirname(__file__) + '/../fixtures/' + prefix + query_object.entity + '.json'
         with open(datafile) as data_file:
             return_data = json.load(data_file)
         return 200, return_data
