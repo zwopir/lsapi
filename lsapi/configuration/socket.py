@@ -1,7 +1,5 @@
 from ConfigParser import ConfigParser
-from model.communication import Socket
 import os
-import sys
 
 
 class SocketConfiguration:

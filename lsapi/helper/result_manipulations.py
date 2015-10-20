@@ -1,5 +1,4 @@
 from flask import url_for
-
 from model.defaults import INTEGER_COLUMNS
 
 

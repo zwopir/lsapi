@@ -3,7 +3,7 @@ import urllib
 
 from mock import patch
 
-from webapp import lsapi
+from lsapi import lsapi
 from tests.mocks.ls_socket import SocketMocks
 
 

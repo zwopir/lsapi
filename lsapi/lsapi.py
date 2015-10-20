@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 import urllib
-
 from flask import Flask, request, jsonify
-
 from model.query import Query, QueryTableCtx, QueryStatsCtx
 from model.communication import Socket
 from helper.api_exceptions import \

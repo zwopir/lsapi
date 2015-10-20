@@ -2,7 +2,6 @@ from __future__ import print_function
 import StringIO
 import time
 import datetime
-
 from model.defaults import FILTER_CMP_OPERATORS, \
     FILTER_BOOL_OPERATORS, \
     KNOWN_TABLES, \

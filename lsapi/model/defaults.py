@@ -1,5 +1,3 @@
-__author__ = 'oelmuellerc'
-
 DEFAULT_COLUMNS = {
     "hosts": [
         "acknowledged",
