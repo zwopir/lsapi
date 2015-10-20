@@ -1,7 +1,7 @@
 import csv
 import socket
 
-from api_exceptions import LivestatusSocketException
+from helper.api_exceptions import LivestatusSocketException
 
 
 __author__ = 'oelmuellerc'

@@ -1,8 +1,9 @@
 import unittest
-import lsapi
+
 from mock import patch
+
+from webapp import lsapi
 from tests.mocks.ls_socket import SocketMocks
-import urllib
 
 
 class LsapiColumnsTestCase(unittest.TestCase):

@@ -2,12 +2,13 @@ from __future__ import print_function
 import StringIO
 import time
 import datetime
+
 from model.defaults import FILTER_CMP_OPERATORS, \
     FILTER_BOOL_OPERATORS, \
     KNOWN_TABLES, \
     MANDATORY_HOST_SCHEDULE_PARAMETER, \
     MANDATORY_SVC_SCHEDULE_PARAMETER
-from api_exceptions import FilterParsingException, \
+from helper.api_exceptions import FilterParsingException, \
     BadFilterException, \
     BadRequestException, \
     NoTableException, \

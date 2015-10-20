@@ -1,7 +1,7 @@
 import json
 
 from model.defaults import DEFAULT_COLUMNS, MANDATORY_COLUMNS
-from api_exceptions import BadFilterException, BadRequestException
+from helper.api_exceptions import BadFilterException, BadRequestException
 
 
 def get_filter_from_get_parameter(get_args):

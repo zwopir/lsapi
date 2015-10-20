@@ -1,5 +1,8 @@
+import random
+
 from flask import jsonify
-from api_exceptions import InternalProcessingException, BadRequestException
+
+from helper.api_exceptions import InternalProcessingException, BadRequestException
 from helper.result_manipulations import \
     identity, \
     make_public_downtime, \
@@ -9,7 +12,6 @@ from helper.result_manipulations import \
     comments2array, \
     downtimes2array, \
     cast_fields
-import random
 
 
 class LivestatusAction:
