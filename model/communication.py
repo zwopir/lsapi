@@ -7,7 +7,7 @@ from api_exceptions import LivestatusSocketException
 __author__ = 'oelmuellerc'
 
 
-class LsSocket:
+class Socket:
     """
     """
     def __init__(self, connection_parameter, socket_type='AF_INET'):

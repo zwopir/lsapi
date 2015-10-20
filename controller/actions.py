@@ -133,19 +133,3 @@ class LivestatusActionCtx:
             return False
 
 
-def make_public(data, ls_return_code, make_public_function=identity, single=False):
-    public_data = {}
-    if ls_return_code == 200:
-        for entity in data:
-            public_data[entity] = [cast_fields(element) for element in data[entity]]
-            public_data[entity] = [make_public_function(element) for element in public_data[entity]]
-            public_data[entity] = [downtimes2array(element) for element in public_data[entity]]
-            public_data[entity] = [comments2array(element) for element in public_data[entity]]
-        if single:
-            for entity in data:
-                # return first (and hopefully only entry) of data
-                return jsonify(public_data[entity][0]), ls_return_code
-        return jsonify(public_data), ls_return_code
-    else:
-        return jsonify(data), ls_return_code
-

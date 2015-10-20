@@ -2,7 +2,7 @@ import json
 import os
 
 
-class LsSocketMocks:
+class SocketMocks:
 
     def __init__(self, connection_parameter, socket_type='AF_INET'):
         self.socket_type = socket_type

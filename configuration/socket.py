@@ -1,5 +1,5 @@
 from ConfigParser import ConfigParser
-from model.socket_communication import LsSocket
+from model.communication import Socket
 import os
 import sys
 

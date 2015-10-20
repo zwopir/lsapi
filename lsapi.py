@@ -1,9 +1,8 @@
 #!/usr/bin/env python
-from __future__ import print_function
 import urllib
 from flask import Flask, request, jsonify
-from model.lsquery import LsQuery, LsQueryTableCtx, LsQueryStatsCtx
-from model.socket_communication import LsSocket
+from model.query import Query, QueryTableCtx, QueryStatsCtx
+from model.communication import Socket
 from api_exceptions import \
     FilterParsingException, \
     NoDataException, \
@@ -12,12 +11,12 @@ from api_exceptions import \
     BadRequestException, \
     LivestatusSocketException, \
     InternalProcessingException
-from helper.filter_handling import \
+from helper.parameter_handling import \
     get_filter_from_get_parameter, \
     get_columns_from_get_parameter_or_use_defaults, \
     filter_to_dict
 from controller.actions import LivestatusActionCtx
-from configuration.socket_config import SocketConfiguration
+from configuration.socket import SocketConfiguration
 
 
 # TODO: class and def documentations
@@ -31,16 +30,16 @@ version = 'v1'
 
 config = SocketConfiguration(__file__)
 
-ls_accessor = LsSocket(config.connection_string, config.connection_type)
+ls_accessor = Socket(config.connection_string, config.connection_type)
 # init LS query class
-ls_query = LsQuery(ls_accessor)
+ls_query = Query(ls_accessor)
 
 @app.route('/%s/columns' % version, methods=['GET'])
 def get_columns():
     entity = 'columns'
     columns = get_columns_from_get_parameter_or_use_defaults(request.args, entity)
     query_filter = get_filter_from_get_parameter(request.args)
-    with LsQueryTableCtx(ls_query, entity, query_filter, columns) as ls_ctx:
+    with QueryTableCtx(ls_query, entity, query_filter, columns) as ls_ctx:
         data, ls_return_code = ls_ctx.query()
         with LivestatusActionCtx(data, ls_return_code) as task_ctx:
             return task_ctx.return_table()
@@ -53,7 +52,7 @@ def g_comments():
     entity = 'comments'
     query_filter = get_filter_from_get_parameter(request.args)
     columns = get_columns_from_get_parameter_or_use_defaults(request.args, entity)
-    with LsQueryTableCtx(ls_query, entity, query_filter, columns) as ls_ctx:
+    with QueryTableCtx(ls_query, entity, query_filter, columns) as ls_ctx:
         data, ls_return_code = ls_ctx.query()
         with LivestatusActionCtx(data, ls_return_code) as task_ctx:
             return task_ctx.return_table()
@@ -65,7 +64,7 @@ def get_comment(comment_id):
     entity = 'comments'
     query_filter = filter_to_dict('{"eq":["id","%d"]}' % comment_id)
     columns = get_columns_from_get_parameter_or_use_defaults(request.args, entity)
-    with LsQueryTableCtx(ls_query, entity, query_filter, columns) as ls_ctx:
+    with QueryTableCtx(ls_query, entity, query_filter, columns) as ls_ctx:
         data, ls_return_code = ls_ctx.query()
         with LivestatusActionCtx(data, ls_return_code) as task_ctx:
             return task_ctx.return_table()
@@ -79,7 +78,7 @@ def g_downtime():
     entity = 'downtimes'
     columns = get_columns_from_get_parameter_or_use_defaults(request.args, entity)
     query_filter = get_filter_from_get_parameter(request.args)
-    with LsQueryTableCtx(ls_query, entity, query_filter, columns) as ls_ctx:
+    with QueryTableCtx(ls_query, entity, query_filter, columns) as ls_ctx:
         data, ls_return_code = ls_ctx.query()
         with LivestatusActionCtx(data, ls_return_code) as task_ctx:
             if request.method == 'GET':
@@ -97,7 +96,7 @@ def get_downtime(downtime_id):
     entity = 'downtimes'
     query_filter = filter_to_dict('{"eq":["id",%d]}' % downtime_id)
     columns = get_columns_from_get_parameter_or_use_defaults(request.args, entity)
-    with LsQueryTableCtx(ls_query, entity, query_filter, columns) as ls_ctx:
+    with QueryTableCtx(ls_query, entity, query_filter, columns) as ls_ctx:
         data, ls_return_code = ls_ctx.query()
         with LivestatusActionCtx(data, ls_return_code) as task_ctx:
             if request.method == 'GET':
@@ -114,7 +113,7 @@ def get_services():
     entity = 'services'
     query_filter = get_filter_from_get_parameter(request.args)
     columns = get_columns_from_get_parameter_or_use_defaults(request.args, entity)
-    with LsQueryTableCtx(ls_query, entity, query_filter, columns) as ls_ctx:
+    with QueryTableCtx(ls_query, entity, query_filter, columns) as ls_ctx:
         data, ls_return_code = ls_ctx.query()
         with LivestatusActionCtx(data, ls_return_code) as task_ctx:
             if request.method == 'POST':
@@ -125,7 +124,7 @@ def get_services():
                 # verify new downtimes
                 downtime_filter = filter_to_dict('{"rei": ["comment", "%s"]}' % downtime_identifier)
                 downtime_columns = get_columns_from_get_parameter_or_use_defaults({}, 'downtimes')
-                with LsQueryTableCtx(ls_query, 'downtimes', downtime_filter, downtime_columns) as downtime_ls_ctx:
+                with QueryTableCtx(ls_query, 'downtimes', downtime_filter, downtime_columns) as downtime_ls_ctx:
                     downtime_return_code, message = downtime_ls_ctx.verify_downtimes(count)
                     return jsonify({"message": message}), downtime_return_code
             else:
@@ -140,7 +139,7 @@ def get_services_filtered_by_host(host):
     entity = 'services'
     query_filter = filter_to_dict('{"eq":["host_display_name", "%s"]}' % host)
     columns = get_columns_from_get_parameter_or_use_defaults(request.args, entity)
-    with LsQueryTableCtx(ls_query, entity, query_filter, columns) as ls_ctx:
+    with QueryTableCtx(ls_query, entity, query_filter, columns) as ls_ctx:
         data, ls_return_code = ls_ctx.query()
         with LivestatusActionCtx(data, ls_return_code) as task_ctx:
             if request.method == 'POST':
@@ -149,7 +148,7 @@ def get_services_filtered_by_host(host):
                 # verify new downtimes
                 downtime_filter = filter_to_dict('{"rei": ["comment", "%s"]}' % downtime_identifier)
                 downtime_columns = get_columns_from_get_parameter_or_use_defaults({}, 'downtimes')
-                with LsQueryTableCtx(ls_query, 'downtimes', downtime_filter, downtime_columns) as downtime_ls_ctx:
+                with QueryTableCtx(ls_query, 'downtimes', downtime_filter, downtime_columns) as downtime_ls_ctx:
                     downtime_return_code, message = downtime_ls_ctx.verify_downtimes(count)
                     return jsonify({"message": message}), downtime_return_code
             else:
@@ -164,7 +163,7 @@ def get_service_filtered_by_host_and_service(host, service):
     query_filter = filter_to_dict('{"and":[{"eq":["host_display_name","%s"]},{"eq":["service_description","%s"]}]}'
                                   % (host, unencoded_service))
     columns = get_columns_from_get_parameter_or_use_defaults(request.args, entity)
-    with LsQueryTableCtx(ls_query, entity, query_filter, columns) as ls_ctx:
+    with QueryTableCtx(ls_query, entity, query_filter, columns) as ls_ctx:
         data, ls_return_code = ls_ctx.query()
         with LivestatusActionCtx(data, ls_return_code) as task_ctx:
             if request.method == 'POST':
@@ -173,7 +172,7 @@ def get_service_filtered_by_host_and_service(host, service):
                 # verify new downtimes
                 downtime_filter = filter_to_dict('{"rei": ["comment", "%s"]}' % downtime_identifier)
                 downtime_columns = get_columns_from_get_parameter_or_use_defaults({}, 'downtimes')
-                with LsQueryTableCtx(ls_query, 'downtimes', downtime_filter, downtime_columns) as downtime_ls_ctx:
+                with QueryTableCtx(ls_query, 'downtimes', downtime_filter, downtime_columns) as downtime_ls_ctx:
                     downtime_return_code, message = downtime_ls_ctx.verify_downtimes(count)
                     return jsonify({"message": message}), downtime_return_code
             else:
@@ -187,7 +186,7 @@ def get_hosts():
     entity = 'hosts'
     query_filter = get_filter_from_get_parameter(request.args)
     columns = get_columns_from_get_parameter_or_use_defaults(request.args, entity)
-    with LsQueryTableCtx(ls_query, entity, query_filter, columns) as ls_ctx:
+    with QueryTableCtx(ls_query, entity, query_filter, columns) as ls_ctx:
         data, ls_return_code = ls_ctx.query()
         with LivestatusActionCtx(data, ls_return_code) as task_ctx:
             if request.method == 'POST':
@@ -198,7 +197,7 @@ def get_hosts():
                 # verify new downtimes
                 downtime_filter = filter_to_dict('{"rei": ["comment", "%s"]}' % downtime_identifier)
                 downtime_columns = get_columns_from_get_parameter_or_use_defaults({}, 'downtimes')
-                with LsQueryTableCtx(ls_query, 'downtimes', downtime_filter, downtime_columns) as downtime_ls_ctx:
+                with QueryTableCtx(ls_query, 'downtimes', downtime_filter, downtime_columns) as downtime_ls_ctx:
                     downtime_return_code, message = downtime_ls_ctx.verify_downtimes(count)
                     return jsonify({"message": message}), downtime_return_code
             else:
@@ -211,7 +210,7 @@ def get_host_filtered_by_name(host):
     entity = 'hosts'
     query_filter = filter_to_dict('{"eq":["display_name", "%s"]}' % host)
     columns = get_columns_from_get_parameter_or_use_defaults(request.args, entity)
-    with LsQueryTableCtx(ls_query, entity, query_filter, columns) as ls_ctx:
+    with QueryTableCtx(ls_query, entity, query_filter, columns) as ls_ctx:
         data, ls_return_code = ls_ctx.query()
         with LivestatusActionCtx(data, ls_return_code) as task_ctx:
             if request.method == 'POST':
@@ -220,7 +219,7 @@ def get_host_filtered_by_name(host):
                 # verify new downtimes
                 downtime_filter = filter_to_dict('{"rei": ["comment", "%s"]}' % downtime_identifier)
                 downtime_columns = get_columns_from_get_parameter_or_use_defaults({}, 'downtimes')
-                with LsQueryTableCtx(ls_query, 'downtimes', downtime_filter, downtime_columns) as downtime_ls_ctx:
+                with QueryTableCtx(ls_query, 'downtimes', downtime_filter, downtime_columns) as downtime_ls_ctx:
                     downtime_return_code, message = downtime_ls_ctx.verify_downtimes(count)
                     return jsonify({"message": message}), downtime_return_code
             else:
@@ -233,7 +232,7 @@ def get_host_filtered_by_name(host):
 @app.route('/%s/stats/<entity>/<operator>/<column>/<value>' % version, methods=['GET'])
 def get_stats(entity, operator, column, value):
     stats_filter = get_filter_from_get_parameter(request.args)
-    with LsQueryStatsCtx(ls_query, entity, stats_filter, column, operator, value) as ls_stats_ctx:
+    with QueryStatsCtx(ls_query, entity, stats_filter, column, operator, value) as ls_stats_ctx:
         data, ls_return_code = ls_stats_ctx.query()
         with LivestatusActionCtx(data, ls_return_code) as task_ctx:
             return task_ctx.return_table()

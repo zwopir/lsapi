@@ -15,7 +15,7 @@ from api_exceptions import FilterParsingException, \
     InternalProcessingException
 
 
-class LsQuery:
+class Query:
     def __init__(self, ls_accessor):
         self.ls_accessor = ls_accessor
         self.querystring = None
@@ -250,7 +250,7 @@ class LsQuery:
         return int((td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6)
 
 
-class LsQueryTableCtx:
+class QueryTableCtx:
     def __init__(self, ls_query_instance, entity, query_filter, columns):
         self.ls_query_instance = ls_query_instance
         self.entity = entity
@@ -270,7 +270,7 @@ class LsQueryTableCtx:
             return True
 
 
-class LsQueryStatsCtx:
+class QueryStatsCtx:
     def __init__(self, ls_query_instance, entity, query_filter, column, operator, value):
         self.ls_query_instance = ls_query_instance
         self.entity = entity
