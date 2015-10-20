@@ -250,7 +250,7 @@ class LsQuery:
         return int((td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6)
 
 
-class LsQueryCtx:
+class LsQueryTableCtx:
     def __init__(self, ls_query_instance, entity, query_filter, columns):
         self.ls_query_instance = ls_query_instance
         self.entity = entity
@@ -260,6 +260,31 @@ class LsQueryCtx:
     def __enter__(self):
         self.ls_query_instance.set_filter(self.query_filter)
         self.ls_query_instance.create_table_query(self.entity, self.columns)
+        return self.ls_query_instance
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.ls_query_instance.finish()
+        if exc_type is not None:
+            return False
+        else:
+            return True
+
+
+class LsQueryStatsCtx:
+    def __init__(self, ls_query_instance, entity, query_filter, column, operator, value):
+        self.ls_query_instance = ls_query_instance
+        self.entity = entity
+        self.query_filter = query_filter
+        self.column = column
+        self.operator = operator
+        self.value = value
+
+    def __enter__(self):
+        self.ls_query_instance.set_filter(self.query_filter)
+        self.ls_query_instance.create_stats_query(self.entity,
+                                                  self.column,
+                                                  self.operator,
+                                                  self.value)
         return self.ls_query_instance
 
     def __exit__(self, exc_type, exc_val, exc_tb):
