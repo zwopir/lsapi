@@ -1,0 +1,2 @@
+Flask==0.10.1
+ConfigParser==3.5.0b2
