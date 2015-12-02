@@ -2,8 +2,8 @@ import random
 
 from flask import jsonify
 
-from helper.api_exceptions import InternalProcessingException, BadRequestException
-from helper.result_manipulations import \
+from lsapi.helper.api_exceptions import InternalProcessingException, BadRequestException
+from lsapi.helper.result_manipulations import \
     identity, \
     make_public_downtime, \
     make_public_comment, \
@@ -133,5 +133,3 @@ class LivestatusActionCtx:
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is not None:
             return False
-
-
