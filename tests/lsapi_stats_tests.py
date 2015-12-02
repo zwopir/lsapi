@@ -23,28 +23,28 @@ class LsapiColumnsTestCase(unittest.TestCase):
         self.app = lsapi.app.test_client()
 
     # /stats GET endpoint on hosts
-    @patch('lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
+    @patch('lsapi.lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
     def test_stats_hosts_eq_display_name(self):
         response = self.app.get('%s/stats/hosts/eq/display_name/%s' % (self.version, self.testhost))
         assert "count" in response.data
         assert response.status_code == 200
 
     # /stats GET endpoint on services
-    @patch('lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
+    @patch('lsapi.lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
     def test_stats_services_eq_display_name(self):
         response = self.app.get('%s/stats/services/eq/display_name/%s' % (self.version, self.testservice))
         assert "count" in response.data
         assert response.status_code == 200
 
     # /stats GET endpoint on downtimes
-    @patch('lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
+    @patch('lsapi.lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
     def test_stats_downtimes_eq_display_name(self):
         response = self.app.get('%s/stats/downtimes/eq/author/%s' % (self.version, self.testauthor))
         assert "count" in response.data
         assert response.status_code == 200
 
     # /stats GET endpoint on comments
-    @patch('lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
+    @patch('lsapi.lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
     def test_stats_comments_eq_display_name(self):
         response = self.app.get('%s/stats/comments/eq/author/%s' % (self.version, self.testauthor))
         assert "count" in response.data
@@ -53,13 +53,13 @@ class LsapiColumnsTestCase(unittest.TestCase):
     # /stats GET endpoint on hosts with non-existent column
     # can't be tested with a stupid lssocket mock: Livestatus returns an error
     # which isn't returned by mock
-    @patch('lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
+    @patch('lsapi.lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
     def test_stats_hosts_eq_whatever(self):
         _ = self.app.get('%s/stats/hosts/eq/whatever/%s' % (self.version, self.testhost))
         assert True
 
     # /stats GET enpoint on hosts with non-existent operator
-    @patch('lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
+    @patch('lsapi.lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
     def test_stats_hosts_wrong_operator(self):
         response = self.app.get('%s/stats/hosts/nex/display_name/%s' % (self.version, self.testhost))
         assert response.status_code == 400

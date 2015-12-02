@@ -1,7 +1,7 @@
 import json
 
-from model.defaults import DEFAULT_COLUMNS, MANDATORY_COLUMNS
-from helper.api_exceptions import BadFilterException, BadRequestException
+from lsapi.model.defaults import DEFAULT_COLUMNS, MANDATORY_COLUMNS
+from api_exceptions import BadFilterException, BadRequestException
 
 
 def get_filter_from_get_parameter(get_args):
@@ -49,4 +49,3 @@ def get_columns_from_get_parameter_or_use_defaults(get_args, entity):
             raise BadRequestException("can't convert parameter columns to a list", status_code=400)
     else:
         return DEFAULT_COLUMNS[entity]
-

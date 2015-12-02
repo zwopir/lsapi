@@ -1,5 +1,5 @@
 from flask import url_for
-from model.defaults import INTEGER_COLUMNS
+from lsapi.model.defaults import INTEGER_COLUMNS
 
 
 def downtimes2array(ent):

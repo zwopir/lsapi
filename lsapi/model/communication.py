@@ -1,6 +1,6 @@
 import csv
 import socket
-from helper.api_exceptions import LivestatusSocketException
+from lsapi.helper.api_exceptions import LivestatusSocketException
 
 
 class Socket:

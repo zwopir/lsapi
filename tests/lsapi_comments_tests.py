@@ -22,14 +22,14 @@ class LsapiColumnsTestCase(unittest.TestCase):
         self.app = lsapi.app.test_client()
 
     # /comments GET endpoint without parameter
-    @patch('lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
+    @patch('lsapi.lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
     def test_comments_get(self):
         response = self.app.get('%s/comments' % self.version)
         assert response.status_code == 200
         assert self.testcomment in response.data
 
     # /comments GET endpoint with a correct filter parameter
-    @patch('lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
+    @patch('lsapi.lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
     def test_comments_get_with_correct_filter_parameter(self):
         get_parameter = urllib.quote_plus('%s' % self.comment_filter_correct)
         response = self.app.get('%s/comments?filter=%s' % (self.version, get_parameter))
@@ -37,7 +37,7 @@ class LsapiColumnsTestCase(unittest.TestCase):
         assert self.testcomment in response.data
 
     # /comments GET endpoint with an incorrect filter parameter (faulty json)
-    @patch('lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
+    @patch('lsapi.lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
     def test_comments_get_with_faulty_filter_parameter(self):
         get_parameter = urllib.quote_plus('%s' % self.comment_filter_incorrect)
         response = self.app.get('%s/comments?filter=%s' % (self.version, get_parameter))
@@ -45,7 +45,7 @@ class LsapiColumnsTestCase(unittest.TestCase):
         assert "filter parameter can't be parsed as json" in response.data
 
     # /comments GET endpoint with an incorrect filter parameter (unknown operator)
-    @patch('lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
+    @patch('lsapi.lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
     def test_comments_get_with_unknown_filter_parameter(self):
         get_parameter = urllib.quote_plus('%s' % self.comment_filter_wrong_operator)
         response = self.app.get('%s/comments?filter=%s' % (self.version, get_parameter))
@@ -54,7 +54,7 @@ class LsapiColumnsTestCase(unittest.TestCase):
 
     # /comments GET endpoint with a correct comments parameter
     # livestatus decides, which comments are returned, so in a mocked world, we don't see any difference
-    @patch('lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
+    @patch('lsapi.lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
     def test_comments_get_with_correct_comments_parameter(self):
         get_parameter = urllib.quote_plus('%s' % self.comment_columns_correct)
         response = self.app.get('%s/comments?columns=%s' % (self.version, get_parameter))
@@ -63,7 +63,7 @@ class LsapiColumnsTestCase(unittest.TestCase):
 
     # /comments GET endpoint with a incorrect comments parameter (faulty json)
     # should return 400/BAD_REQUEST
-    @patch('lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
+    @patch('lsapi.lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
     def test_comments_get_with_incorrect_comments_parameter(self):
         get_parameter = urllib.quote_plus('%s' % self.comment_columns_incorrect)
         response = self.app.get('%s/comments?columns=%s' % (self.version, get_parameter))
@@ -72,7 +72,7 @@ class LsapiColumnsTestCase(unittest.TestCase):
 
     # /comments GET endpoint with a incorrect comments parameter (not resulting in list)
     # should return 400/BAD_REQUEST
-    @patch('lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
+    @patch('lsapi.lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
     def test_comments_get_with_non_list_comments_parameter(self):
         get_parameter = urllib.quote_plus('%s' % self.comment_columns_not_a_list)
         response = self.app.get('%s/comments?columns=%s' % (self.version, get_parameter))
@@ -80,7 +80,7 @@ class LsapiColumnsTestCase(unittest.TestCase):
         assert "can't convert parameter columns to a list" in response.data
 
     # /comments/{id} GET endpoint without parameter
-    @patch('lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
+    @patch('lsapi.lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
     def test_comments_get(self):
         response = self.app.get('%s/comments/%d' % (self.version, 22222))
         assert response.status_code == 200
