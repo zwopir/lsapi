@@ -1,6 +1,9 @@
 #!/usr/bin/env python
+
+import os
 import urllib
 from flask import Flask, request, jsonify
+
 from model.query import Query, QueryTableCtx, QueryStatsCtx
 from model.communication import Socket
 from helper.api_exceptions import \
@@ -29,7 +32,8 @@ app = Flask(__name__)
 version = 'v1'
 
 
-config = SocketConfiguration(__file__)
+config = SocketConfiguration(cfg_file=os.path.join(os.path.dirname(__file__),
+                                                   'lsapi.cfg'))
 
 ls_accessor = Socket(config.connection_string, config.connection_type)
 # init LS query class

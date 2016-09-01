@@ -1,28 +1,45 @@
-from ConfigParser import ConfigParser
+from __future__ import print_function
+
 import os
+from ConfigParser import (SafeConfigParser, ParsingError,
+                          NoSectionError, NoOptionError)
 
 
-class SocketConfiguration:
-    def __init__(self, reference_file, filename='lsapi.cfg'):
-        # read and parse configuration file
-        config = ConfigParser()
-        this_path = os.path.dirname(reference_file) + '/'
-        this_path_conf = os.path.dirname(reference_file) + '/conf/'
-        for path in ['/etc/', this_path, this_path_conf]:
-            if os.path.exists(path + filename):
-                config.read(path + filename)
-                break
+class SocketConfiguration(object):
+    defaults = {
+        'type': 'AF_INET',
+        'host': 'localhost',
+        'socketfile': '/omd/sites/monitoring/tmp/run/live',
+        # must be string to make SafeConfigParser.getint happy
+        'port': '6557'
+    }
 
-        self.connection_type = config.get('connection', 'type', 'AF_INET')
-        self.connection_host = config.get('connection', 'host', 'localhost')
-        self.connection_port = int(config.get('connection', 'port', 6557))
-        self.connection_file = config.get('connection', 'socketfile', '/omd/sites/monitoring/tmp/run/live')
-        # get connection string
+    def __init__(self, cfg_file='lsapi.cfg'):
+        config = SafeConfigParser(defaults=self.defaults)
+        if os.path.exists(cfg_file):
+            try:
+                config.read(cfg_file)
+            except (ParsingError, NoSectionError):
+                raise
+        else:
+            print("Path {path} does not exist, falling back to defaults: "
+                  "{defaults}.".format(path=cfg_file, defaults=self.defaults))
+
+        if not config.has_section('connection'):
+            config.add_section('connection')
+
+        self.connection_type = config.get(section='connection',
+                                          option='type')
+        self.connection_host = config.get(section='connection',
+                                          option='host')
+        self.connection_file = config.get(section='connection',
+                                          option='socketfile')
+        self.connection_port = config.getint(section='connection',
+                                             option='port')
+
         if self.connection_type == 'AF_INET':
             self.connection_string = (self.connection_host, self.connection_port)
-            # self.ls_accessor = LsSocket((self.connection_host, self.connection_port), self.connection_type)
         elif self.connection_type == 'AF_UNIX':
             self.connection_string = self.connection_file
-            # self.ls_accessor = LsSocket(self.connection_file, self.connection_type)
         else:
-            raise SystemExit("connection type must be either AF_INET or AF_UNIX")
+            raise TypeError("connection type must be either AF_INET or AF_UNIX")
