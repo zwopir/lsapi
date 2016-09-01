@@ -1,6 +1,7 @@
 import unittest
 import urllib
 
+from nose.tools import nottest
 from mock import patch
 
 from lsapi import lsapi
@@ -28,6 +29,18 @@ class LsapiHostsTestCase(unittest.TestCase):
     def setUp(self):
         lsapi.app.config['TESTING'] = True
         self.app = lsapi.app.test_client()
+        self.verify_downtimes_timeout = 0.1
+        self.orig_verify_downtimes = lsapi.ls_query.verify_downtimes
+        lsapi.ls_query.verify_downtimes = self.mock_verify_downtimes
+
+    def tearDown(self):
+        lsapi.ls_query.verify_downtimes = self.orig_verify_downtimes
+
+    @nottest
+    def mock_verify_downtimes(self, count):
+        return self.orig_verify_downtimes(count,
+                                          timeout=self.verify_downtimes_timeout)
+
 
     # /hosts GET endpoint without parameter
     @patch('lsapi.lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
@@ -102,7 +115,8 @@ class LsapiHostsTestCase(unittest.TestCase):
         get_parameter = urllib.quote_plus('%s' % self.host_filter_correct)
         response = self.app.post('%s/hosts?filter=%s' % (self.version, get_parameter), data=self.downtime_data)
         assert response.status_code == 500
-        assert "downtimes not found within 5 seconds" in response.data
+        assert "downtimes not found within {timeout} seconds".format(
+            timeout=self.verify_downtimes_timeout) in response.data
 
     # /hosts/{hostname} GET endpoint
     @patch('lsapi.lsapi.ls_query.ls_accessor', new=SocketMocks('lsquery mock'))
@@ -112,9 +126,3 @@ class LsapiHostsTestCase(unittest.TestCase):
         response = self.app.get('%s/hosts/%s' % (self.version, self.testhost))
         assert response.status_code == 200
         assert self.testhost in response.data
-
-    def tearDown(self):
-        pass
-
-if __name__ == '__main__':
-    unittest.main()
