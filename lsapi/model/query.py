@@ -1,7 +1,9 @@
 from __future__ import print_function
+
 import StringIO
 import time
 import datetime
+
 from defaults import FILTER_CMP_OPERATORS, \
     FILTER_BOOL_OPERATORS, \
     KNOWN_TABLES, \
@@ -114,31 +116,35 @@ class Query:
         else:
             return {"message": "send nagios command"}, 200
 
-    def verify_downtimes(self, expected_entries, tries=5, interval=1):
+    def verify_downtimes(self, expected_entries, timeout=5):
+        start = datetime.datetime.now()
+
         if not self.ls_accessor:
             raise LivestatusSocketException("Livestatus Socket Error (livestatus accessor uninitialized)", status_code=500)
         if self.entity != 'downtimes':
             raise LivestatusSocketException("LsQuery must be initialized to downtimes to verify downtimes", status_code=500)
-        for t in range(0, tries):
-            time.sleep(interval)
+
+        while datetime.datetime.now() < start + datetime.timedelta(seconds=timeout):
             self.ls_accessor.connect()
             self.ls_accessor.send(self)
-            # TODO: don't read in as list, but as (returncode, data)
-            data = self.ls_accessor.read_query_result(self)
-            if data[0] == 200:
+            response_code, response_data = self.ls_accessor.read_query_result(self)
+            if response_code == 200:
                 # query succeeded. Let's count
-                return_data = data[1]
-                if len(return_data) == expected_entries:
-                    return 200, 'found all %d newly set downtimes' % expected_entries
+                if len(response_data) == expected_entries:
+                    return 200, 'found all {total} newly-set downtimes'.format(
+                        total=expected_entries)
                 else:
                     # try again
                     pass
-            elif data[0] == 404:
+            elif response_code == 404:
                 # not (yet) found
                 pass
             else:
-                return data[0], 'error looking up downtimes (%s)' % data[1]
-        return 500, 'downtimes not found within %d seconds' % (tries*interval)
+                return response_code, 'error looking up downtimes ({response})'.format(
+                    response=response_data)
+
+        return 500, 'downtimes not found within {total} seconds'.format(
+            total=timeout)
 
     def finish(self):
         self.entity = None
