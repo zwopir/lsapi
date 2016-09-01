@@ -1,2 +1,2 @@
-Flask==0.10.1
-ConfigParser==3.5.0b2
+ConfigParser==3.5.0
+Flask==0.11.1
