@@ -1,9 +1,9 @@
 import json
-import os
+
+from tests.helpers import get_fixture
 
 
-class SocketMocks:
-
+class SocketMocks(object):
     def __init__(self, connection_parameter, socket_type='AF_INET'):
         self.socket_type = socket_type
         self.ls_reader_object = None
@@ -23,15 +23,12 @@ class SocketMocks:
             :return (returncode, data)
             :type tuple(int, dict)
         """
-        if "GET %s\nStats" % query_object.entity in query_object.querystring:
-            prefix = 'stats_'
-        else:
-            prefix = ''
+        path = "{prefix}{entity}.json".format(
+            prefix='stats_' if "GET {entity}\nStats".format(
+                entity=query_object.entity) in query_object.querystring else '',
+            entity=query_object.entity)
 
-        datafile = os.path.dirname(__file__) + '/../fixtures/' + prefix + query_object.entity + '.json'
-        with open(datafile) as data_file:
-            return_data = json.load(data_file)
-        return 200, return_data
+        return 200, json.loads(get_fixture(path))
 
     def disconnect(self):
         pass
